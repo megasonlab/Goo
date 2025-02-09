@@ -29,6 +29,7 @@ class Cell(BlenderObject):
     def __init__(self):
         self._name = ""
         self.obj: bpy.types.Object = None
+        self._color: tuple[float, float, float] = None
 
         self.direction = Vector()
         self.adhesion_forces: list[AdhesionForce] = []
@@ -296,6 +297,15 @@ class Cell(BlenderObject):
         """Color of the cell"""
         return self.mat.diffuse_color[:3]
 
+    @color.setter
+    def color(self, color: tuple[float, float, float]) -> None:
+        """Sets the color of the cell.
+
+        Args:
+            color: A tuple (r, g, b) representing the new color to apply.
+        """
+        self.mat.diffuse_color[:3] = color
+
     def recolor(self, color: tuple[float, float, float]) -> None:
         """Recolors the material of the cell.
 
@@ -306,15 +316,26 @@ class Cell(BlenderObject):
         Args:
             color: A tuple (r, g, b) representing the new color to apply.
         """
+        if not self.mat:
+            print(f"Warning: Cell {self.name} has no material!")
+            return
+
+        # If material is shared (used by multiple objects), make a unique copy
+        if self.mat.users > 1:
+            new_mat = self.mat.copy()  # Duplicate the material
+            new_mat.name = f"{self.name}_mat"  # Give it a unique name
+            self.obj.data.materials[0] = new_mat  # Assign the new material to the cell
+        
+        # Apply the color
         r, g, b = color
-        _, _, _, a = self.mat.diffuse_color
+        a = 1.0  # Ensure full opacity
         self.mat.diffuse_color = (r, g, b, a)
 
+        # If using material nodes, update Base Color in the node tree
         if self.mat.use_nodes:
             for node in self.mat.node_tree.nodes:
                 if "Base Color" in node.inputs:
-                    _, _, _, a = node.inputs["Base Color"].default_value
-                    node.inputs["Base Color"].default_value = r, g, b, a
+                    node.inputs["Base Color"].default_value = (r, g, b, a)
 
     # ===== Physics operations =====
     def enable_physics(self):
@@ -653,7 +674,8 @@ def create_motion_strength_updater(
         gscale=(0.5, 2),
         pscale=(0, 1),
 ): 
-    """Create a motion strength updater that links a gene to the motion strength of a cell.
+    """Create a motion strength updater that links a gene to 
+    the motion strength of a cell.
     
     Args:
         cell: The cell object.
@@ -691,7 +713,11 @@ def create_motion_strength_updater(
         """Set the motion strength of the cell."""
         cell.celltype.motion_strength = motion_strength
 
-    return PropertyUpdater(gene_conc_getter, weighted_motion_strength, set_motion_strength)
+    return PropertyUpdater(
+        gene_conc_getter, 
+        weighted_motion_strength, 
+        set_motion_strength
+        )
 
 
 def store_settings(mod: bpy.types.bpy_struct) -> dict:

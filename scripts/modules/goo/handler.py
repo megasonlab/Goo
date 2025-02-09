@@ -268,18 +268,42 @@ class RandomMotionHandler(Handler):
 """Possible properties by which cells are colored."""
 Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE"])
 
+"""Color map for the random cell colorizer."""
+COLORS = [
+    (0.902, 0.490, 0.133),  # Orange
+    (0.466, 0.674, 0.188),  # Green
+    (0.208, 0.592, 0.560),  # Teal
+    (0.121, 0.466, 0.705),  # Blue
+    (0.682, 0.780, 0.909),  # Light Blue
+    (0.984, 0.502, 0.447),  # Coral
+    (0.890, 0.101, 0.109),  # Red
+    (0.792, 0.698, 0.839),  # Lavender
+    (0.415, 0.239, 0.603),  # Purple
+    (0.941, 0.894, 0.259),  # Yellow
+    (0.650, 0.337, 0.156),  # Brown
+    (0.647, 0.647, 0.647),  # Grey
+    (0.529, 0.807, 0.980),  # Sky Blue
+    (0.556, 0.929, 0.247),  # Light Green
+    (0.749, 0.376, 0.980),  # Violet
+    (0.980, 0.745, 0.376),  # Peach
+    (0.415, 0.215, 0.235),  # Dark Red
+    (0.905, 0.725, 0.725),  # Soft Pink
+    (0.282, 0.820, 0.800),  # Aqua
+    (0.137, 0.137, 0.137),  # Black
+]
+
 
 class ColorizeHandler(Handler):
-    """Handler for coloring cells based off of a specified property.
+    """Handler for coloring cells based on a specified property.
 
-    Cells are colored on a blue-red spectrum, based on the relative value
-    of the specified property to all other cells. For example, the cell with
-    the highest pressure is colored red, while the cell with an average
-    pressure is colored purple.
+    Cells are colored on a blue-red spectrum based on the relative value
+    of the specified property to all other cells. In RANDOM mode, cells
+    cycle through a fixed 20-color palette.
 
     Attributes:
-        colorizer (Colorizer): the property by which cells are colored.
-        gene (str): optional, the gene off of which cell color is based.
+        colorizer (Colorizer): The property by which cells are colored.
+        gene (str): Optional, the gene off of which cell color is based.
+        range (tuple): Optional, range of values for the colorizer.
     """
 
     def __init__(
@@ -291,45 +315,48 @@ class ColorizeHandler(Handler):
         self.colorizer = colorizer
         self.gene = gene
         self.range = range
+        self.color_map = {}
+        self.color_counter = 0
 
     def _scale(self, values):
-        if self.range is None:
-            # Scaled based on min and max
-            return (values - np.min(values)) / np.max(np.max(values) - np.min(values), 1)
-        if self.range is not None:
-            # Truncate numbers into specific range, then scale based on max of range.
-            min, max = self.range
-            values = np.minimum(values, max)
-            values = np.maximum(values, min)
-            return (values - min) / (max - min)
+        if len(values) == 0:
+            return np.array([])
+        min_val = np.min(values)
+        max_val = np.max(values)
+
+        if max_val - min_val == 0:
+            return np.ones_like(values)
+        return (values - min_val) / (max_val - min_val)
 
     def run(self, scene, depsgraph):
-        match self.colorizer:
-            case Colorizer.PRESSURE:
-                ps = np.array([cell.pressure for cell in self.get_cells()])
-                values = self._scale(ps)
-            case Colorizer.VOLUME:
-                vs = np.array([cell.volume() for cell in self.get_cells()])
-                values = self._scale(vs)
-            case Colorizer.GENE:
-                gs = np.array(
-                    [cell.metabolites[self.gene] for cell in self.get_cells()]
-                )
-                values = self._scale(gs)
-            case Colorizer.RANDOM:
-                values = np.random.rand(len(self.get_cells()))
-            case _:
-                raise ValueError(
-                    "Colorizer must be one of PRESSURE, VOLUME, GENE, or RANDOM."
-                )
+        """Applies coloring to cells based on the selected property."""
+        cells = self.get_cells()
+        red, blue = Vector((1.0, 0.0, 0.0)), Vector((0.0, 0.0, 1.0))
 
-        red = Vector((1.0, 0.0, 0.0))
-        blue = Vector((0.0, 0.0, 1.0))
+        property_values = {
+            Colorizer.PRESSURE: np.array([cell.pressure for cell in cells]),
+            Colorizer.VOLUME: np.array([cell.volume() for cell in cells]),
+            Colorizer.GENE: np.array([cell.metabolites[self.gene] for cell in cells]) 
+            if self.gene else np.array([]),
+        }.get(self.colorizer, None)
 
-        for cell, p in zip(self.get_cells(), values):
-            color = blue.lerp(red, p)
-            cell.recolor(tuple(color))
+        if self.colorizer == Colorizer.RANDOM:
+            # Assign colors in a deterministic sequence from the fixed palette
+            for cell in cells:
+                if cell.just_divided or cell.name not in self.color_map:
+                    self.color_map[cell.name] = COLORS[self.color_counter % len(COLORS)]
+                    self.color_counter += 1  # Move to the next color
+            values = [self.color_map[cell.name] for cell in cells]
+        elif property_values is not None:
+            values = self._scale(property_values)
+        else:
+            raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, or RANDOM.")
 
+        # Apply colors to cells
+        for cell, value in zip(cells, values):
+            cell.recolor(value if self.colorizer == Colorizer.RANDOM 
+                         else tuple(blue.lerp(red, value)))
+                
 
 def _get_divisions(cells: list[Cell]) -> list[tuple[str, str, str]]:
     """Calculate a list of cells that have divided in the past frame.
