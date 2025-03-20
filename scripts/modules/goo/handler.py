@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Union, TYPE_CHECKING
 from typing_extensions import override, Optional
 from abc import ABC, abstractmethod
 
@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import os
 import h5py
+import tifffile
 
 import numpy as np
 from scipy.spatial.distance import cdist, pdist, squareform
@@ -18,6 +19,16 @@ from mathutils import Vector
 from goo.cell import Cell
 from goo.gene import Gene
 from goo.molecule import Molecule, DiffusionSystem
+
+
+def save_tiff(data: np.ndarray, path: str) -> None:
+    """Save a numpy array as a TIFF file.
+    
+    Args:
+        data: The numpy array to save
+        path: The path where to save the TIFF file
+    """
+    tifffile.imwrite(path, data)
 
 
 class Handler(ABC):
@@ -732,3 +743,229 @@ class DataExporter(Handler):
     def __del__(self):
         """Ensure HDF5 file is closed when object is deleted."""
         self.close()
+
+
+class SliceExporter(Handler):
+    """Handler to save point cloud data of the simulation at each frame and convert to 3D array."""
+
+    def __init__(
+        self,
+        output_dir: str = "", 
+        resolution: tuple[int, int, int] = (64, 128, 128),
+        scale: tuple[float, float, float] = (0.2, 0.1, 0.1),
+        microscope_dt: int = 10,
+        padding: float = 5.0
+    ):
+        self.output_dir = output_dir
+        self.resolution = resolution
+        self.scale = scale
+        self.microscope_dt = microscope_dt
+        self.padding = padding
+
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
+    def get_scene_bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """Get the bounding box of all visible mesh objects in the scene.
+        
+        Returns:
+            tuple: (min_coords, max_coords) representing the bounding box
+        """
+        visible_objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH' 
+                           and obj.visible_get()]
+        
+        if not visible_objects:
+            return np.zeros(3), np.zeros(3)
+        
+        # Get world space coordinates of all vertices
+        all_vertices = []
+        for obj in visible_objects:
+            mesh = obj.data
+            world_matrix = obj.matrix_world
+            for v in mesh.vertices:
+                world_co = world_matrix @ v.co
+                all_vertices.append(world_co)
+        
+        vertices_array = np.array(all_vertices)
+        min_coords = np.min(vertices_array, axis=0)
+        max_coords = np.max(vertices_array, axis=0)
+        
+        # Add padding
+        padding_array = np.array([self.padding] * 3)
+        min_coords -= padding_array
+        max_coords += padding_array
+        
+        return min_coords, max_coords
+
+    def world_to_grid_coords(self, world_coords: np.ndarray) -> np.ndarray:
+        """Convert world coordinates to grid coordinates.
+        
+        Args:
+            world_coords: World space coordinates
+            
+        Returns:
+            Grid coordinates
+        """
+        min_coords, max_coords = self.get_scene_bounds()
+        # Normalize coordinates to [0, 1] range
+        normalized = (world_coords - min_coords) / (max_coords - min_coords)
+        # Scale to grid size
+        return normalized * (np.array(self.resolution) - 1)
+
+    def sample_mesh_points(self, obj: bpy.types.Object, num_points: int = 10000) -> np.ndarray:
+        """Sample points from a mesh object.
+        
+        Args:
+            obj: The mesh object to sample from
+            num_points: Number of points to sample
+            
+        Returns:
+            Array of sampled points in world coordinates
+        """
+        # Get the mesh data
+        mesh = obj.data
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        bm.faces.ensure_lookup_table()
+        
+        # Calculate total area for weighted sampling
+        total_area = sum(f.calc_area() for f in bm.faces)
+        
+        # Sample points
+        points = []
+        for _ in range(num_points):
+            # Select a face based on area
+            face = np.random.choice(bm.faces, p=[f.calc_area()/total_area for f in bm.faces])
+            
+            # Triangulate the face if it has more than 3 vertices
+            if len(face.verts) > 3:
+                # Get the face center
+                center = Vector(face.calc_center_median())
+                
+                # Triangulate using fan triangulation
+                verts = face.verts
+                for i in range(len(verts)):
+                    v1 = Vector(verts[i].co)
+                    v2 = Vector(verts[(i + 1) % len(verts)].co)
+                    v3 = center
+                    
+                    # Generate random barycentric coordinates
+                    r1, r2 = float(np.random.random()), float(np.random.random())
+                    if r1 + r2 > 1:
+                        r1, r2 = 1 - r1, 1 - r2
+                    
+                    # Calculate point position
+                    point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
+                    points.append(obj.matrix_world @ point)
+                    break  # Only use one triangle from the fan
+            else:
+                # For triangular faces, use the original method
+                v1 = Vector(face.verts[0].co)
+                v2 = Vector(face.verts[1].co)
+                v3 = Vector(face.verts[2].co)
+                
+                # Generate random barycentric coordinates
+                r1, r2 = float(np.random.random()), float(np.random.random())
+                if r1 + r2 > 1:
+                    r1, r2 = 1 - r1, 1 - r2
+                
+                # Calculate point position
+                point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
+                points.append(obj.matrix_world @ point)
+        
+        bm.free()
+        return np.array(points)
+
+    def points_to_volume(self, points: np.ndarray) -> np.ndarray:
+        """Convert point cloud to a 3D volume array.
+        
+        Args:
+            points: Array of points in world coordinates
+            
+        Returns:
+            3D volume array
+        """
+        # Convert points to grid coordinates
+        grid_points = self.world_to_grid_coords(points)
+        
+        # Create volume array
+        volume = np.zeros(self.resolution, dtype=np.float32)
+        
+        # Convert to integer coordinates
+        grid_points = grid_points.astype(int)
+        
+        # Filter points within bounds
+        mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
+        grid_points = grid_points[mask]
+        
+        # Add points to volume
+        for point in grid_points:
+            volume[point[0], point[1], point[2]] = 1.0
+        
+        return volume
+
+    def run(self, scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
+        """Run the point cloud export process for each frame.
+
+        Args:
+            scene: The Blender scene.
+            depsgraph: The dependency graph.
+        """
+        # export every microscope_dt
+        if scene.frame_current % self.microscope_dt != 0:
+            return
+
+        # Determine the time step index based on the current frame
+        time_step = scene.frame_current // self.microscope_dt
+
+        # Create a folder for this time step
+        time_step_dir = os.path.join(self.output_dir, f"T{time_step:03d}")
+        if not os.path.exists(time_step_dir):
+            os.makedirs(time_step_dir)
+
+        # Get all visible mesh objects
+        visible_objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH' 
+                           and obj.visible_get()]
+        
+        # Sample points from all meshes
+        all_points = []
+        for obj in visible_objects:
+            points = self.sample_mesh_points(obj)
+            all_points.append(points)
+        
+        # Combine all points
+        combined_points = np.vstack(all_points)
+        
+        # Convert to volume
+        volume = self.points_to_volume(combined_points)
+        
+        # Save as NetCDF
+        import xarray as xr
+        
+        # Create coordinate arrays based on scale
+        z_coords = np.arange(self.resolution[0]) * self.scale[0]
+        y_coords = np.arange(self.resolution[1]) * self.scale[1]
+        x_coords = np.arange(self.resolution[2]) * self.scale[2]
+        
+        # Create dataset
+        ds = xr.Dataset(
+            data_vars={
+                'volume': (['z', 'y', 'x'], volume)
+            },
+            coords={
+                'z': z_coords,
+                'y': y_coords,
+                'x': x_coords
+            },
+            attrs={
+                'description': '3D volume representation of point cloud data',
+                'units': 'microns',
+                'frame': scene.frame_current,
+                'num_points': len(combined_points)
+            }
+        )
+        
+        # Save to NetCDF
+        output_path = os.path.join(time_step_dir, f"point_cloud_volume.nc")
+        ds.to_netcdf(output_path)
+        print(f"Saved point cloud volume for frame {scene.frame_current}")
