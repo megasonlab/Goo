@@ -746,13 +746,25 @@ class DataExporter(Handler):
 
 
 class SliceExporter(Handler):
-    """Handler to save point cloud data of the simulation at each frame and convert to 3D array."""
+    """Handler to save point cloud data of the simulation at each frame and convert to 3D array.
+    
+    Args:
+        output_dir: The directory to save the point cloud data.
+        resolution: The resolution of the grid to save the point cloud data. 
+            Default is (256, 256, 256).
+        scale: The scale of the grid to save the point cloud data.
+            Default is (0.2, 0.2, 0.2).
+        microscope_dt: The time step of the microscope.
+            Default is 10.
+        padding: The padding of the grid to save the point cloud data.
+            Default is 5.0.
+    """
 
     def __init__(
         self,
         output_dir: str = "", 
-        resolution: tuple[int, int, int] = (64, 128, 128),
-        scale: tuple[float, float, float] = (0.2, 0.1, 0.1),
+        resolution: tuple[int, int, int] = (128, 128, 128),
+        scale: tuple[float, float, float] = (1, 1, 1),
         microscope_dt: int = 10,
         padding: float = 5.0
     ):
@@ -812,12 +824,12 @@ class SliceExporter(Handler):
         # Scale to grid size
         return normalized * (np.array(self.resolution) - 1)
 
-    def sample_mesh_points(self, obj: bpy.types.Object, num_points: int = 10000) -> np.ndarray:
-        """Sample points from a mesh object.
+    def sample_mesh_points(self, obj: bpy.types.Object, num_points: int = 15000) -> np.ndarray:
+        """Sample points densely and uniformly from a mesh object.
         
         Args:
             obj: The mesh object to sample from
-            num_points: Number of points to sample
+            num_points: Number of points to sample (increased for better coverage)
             
         Returns:
             Array of sampled points in world coordinates
@@ -831,24 +843,45 @@ class SliceExporter(Handler):
         # Calculate total area for weighted sampling
         total_area = sum(f.calc_area() for f in bm.faces)
         
+        # Calculate points per face based on area
+        points_per_face = []
+        for face in bm.faces:
+            face_area = face.calc_area()
+            # Ensure at least 10 points per face for small faces
+            num_face_points = max(20, int(num_points * (face_area / total_area)))
+            points_per_face.append(num_face_points)
+        
         # Sample points
         points = []
-        for _ in range(num_points):
-            # Select a face based on area
-            face = np.random.choice(bm.faces, p=[f.calc_area()/total_area for f in bm.faces])
-            
-            # Triangulate the face if it has more than 3 vertices
-            if len(face.verts) > 3:
-                # Get the face center
+        for face, num_face_points in zip(bm.faces, points_per_face):
+            # Get face vertices
+            verts = face.verts
+            if len(verts) > 3:
+                # For non-triangular faces, use fan triangulation
                 center = Vector(face.calc_center_median())
-                
-                # Triangulate using fan triangulation
-                verts = face.verts
                 for i in range(len(verts)):
                     v1 = Vector(verts[i].co)
                     v2 = Vector(verts[(i + 1) % len(verts)].co)
                     v3 = center
                     
+                    # Sample points in this triangle
+                    for _ in range(num_face_points // len(verts)):
+                        # Generate random barycentric coordinates
+                        r1, r2 = float(np.random.random()), float(np.random.random())
+                        if r1 + r2 > 1:
+                            r1, r2 = 1 - r1, 1 - r2
+                        
+                        # Calculate point position
+                        point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
+                        points.append(obj.matrix_world @ point)
+            else:
+                # For triangular faces
+                v1 = Vector(verts[0].co)
+                v2 = Vector(verts[1].co)
+                v3 = Vector(verts[2].co)
+                
+                # Sample points in this triangle
+                for _ in range(num_face_points):
                     # Generate random barycentric coordinates
                     r1, r2 = float(np.random.random()), float(np.random.random())
                     if r1 + r2 > 1:
@@ -857,21 +890,6 @@ class SliceExporter(Handler):
                     # Calculate point position
                     point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
                     points.append(obj.matrix_world @ point)
-                    break  # Only use one triangle from the fan
-            else:
-                # For triangular faces, use the original method
-                v1 = Vector(face.verts[0].co)
-                v2 = Vector(face.verts[1].co)
-                v3 = Vector(face.verts[2].co)
-                
-                # Generate random barycentric coordinates
-                r1, r2 = float(np.random.random()), float(np.random.random())
-                if r1 + r2 > 1:
-                    r1, r2 = 1 - r1, 1 - r2
-                
-                # Calculate point position
-                point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
-                points.append(obj.matrix_world @ point)
         
         bm.free()
         return np.array(points)
@@ -898,9 +916,8 @@ class SliceExporter(Handler):
         mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
         grid_points = grid_points[mask]
         
-        # Add points to volume
-        for point in grid_points:
-            volume[point[0], point[1], point[2]] = 1.0
+        # Mark voxels containing points
+        volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = 1.0
         
         return volume
 
