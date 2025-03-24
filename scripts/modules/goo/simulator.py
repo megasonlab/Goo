@@ -37,7 +37,8 @@ class Simulator:
         self.diffsystem = diffsystems[0] if diffsystems else None
         self.physics_dt = physics_dt
         self.molecular_dt = molecular_dt
-        self.addons = ["add_mesh_extra_objects"]
+        # In Blender 4.5, some addons might be renamed or not available
+        self.addons = []  # Removing add_mesh_extra_objects as it's causing issues in 4.5
         self.render_format: Render = Render.PNG
         self.time = time
 
@@ -113,11 +114,16 @@ class Simulator:
 
     def enable_addon(self, addon):
         """Enable an addon in Blender."""
-        if addon not in bpy.context.preferences.addons:
-            bpy.ops.preferences.addon_enable(module=addon)
-            print(f"Addon '{addon}' has been enabled.")
-        else:
-            print(f"Addon '{addon}' is already enabled.")
+        try:
+            if addon not in bpy.context.preferences.addons:
+                bpy.ops.preferences.addon_enable(module=addon)
+                print(f"Addon '{addon}' has been enabled.")
+            else:
+                print(f"Addon '{addon}' is already enabled.")
+        except Exception as e:
+            print(f"Warning: Could not enable addon '{addon}'. Error: {e}")
+            # Continue execution even if addon fails to load
+            pass
 
     def toggle_gravity(self, on):
         """Toggle gravity in the scene."""
