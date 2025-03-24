@@ -319,5 +319,14 @@ class SizeDivisionHandler(DivisionHandler):
 
     @override
     def can_divide(self, cell: Cell):
+        # time = bpy.context.scene.frame_current * self.dt
+        # if "last_division_time" not in cell:
+        #     cell["last_division_time"] = time
+            
         div_volume = np.random.normal(self.mu, self.sigma)
         return cell.volume() >= div_volume
+    
+    @override
+    def update_on_divide(self, cell: Cell):
+        time = bpy.context.scene.frame_current * self.dt
+        cell["last_division_time"] = time

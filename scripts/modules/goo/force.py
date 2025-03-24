@@ -229,6 +229,7 @@ def create_adhesion(
             )
         obj = bpy.data.objects.new(name, None)
         obj.location = loc
+        obj.hide_set(False)
     adhesion_force = AdhesionForce(obj)
 
     adhesion_force.strength = strength
@@ -251,8 +252,9 @@ def create_motion(name: str, loc: tuple, strength: int) -> MotionForce:
     obj.location = loc
     force = MotionForce(obj)
     force.init_strength = strength
-
     force.strength = strength
+    # obj.hide_render = True
+    obj.hide_viewport = True
     return force
 
 
