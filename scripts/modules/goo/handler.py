@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable, Union, TYPE_CHECKING
 from typing_extensions import override, Optional
 from abc import ABC, abstractmethod
 
@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import os
 import h5py
+import tifffile
 
 import numpy as np
 from scipy.spatial.distance import cdist, pdist, squareform
@@ -18,6 +19,16 @@ from mathutils import Vector
 from goo.cell import Cell
 from goo.gene import Gene
 from goo.molecule import Molecule, DiffusionSystem
+
+
+def save_tiff(data: np.ndarray, path: str) -> None:
+    """Save a numpy array as a TIFF file.
+    
+    Args:
+        data: The numpy array to save
+        path: The path where to save the TIFF file
+    """
+    tifffile.imwrite(path, data)
 
 
 class Handler(ABC):
@@ -736,3 +747,316 @@ class DataExporter(Handler):
     def __del__(self):
         """Ensure HDF5 file is closed when object is deleted."""
         self.close()
+
+
+class SliceExporter(Handler):
+    """Handler to save point cloud data of the simulation at each frame and convert to 3D array.
+    
+    Args:
+        output_dir: The directory to save the point cloud data.
+        resolution: The resolution of the grid to save the point cloud data. 
+            Default is (256, 256, 256).
+        scale: The scale of the grid to save the point cloud data.
+            Default is (0.2, 0.2, 0.2).
+        microscope_dt: The time step of the microscope.
+            Default is 10.
+        padding: The padding of the grid to save the point cloud data.
+            Default is 5.0.
+        downscale: The downscaling factor for the low-resolution version.
+            Can be a single integer or a tuple of integers for each dimension.
+            Default is None (no downscaling).
+    """
+
+    def __init__(
+        self,
+        output_dir: str = "", 
+        resolution: tuple[int, int, int] = (512, 512, 512),
+        scale: tuple[float, float, float] = (0.5, 0.5, 0.5),
+        microscope_dt: int = 10,
+        padding: float = 5.0,
+        downscale: Union[int, tuple[int, int, int]] = None
+    ):
+        self.output_dir = output_dir
+        self.resolution = resolution
+        self.scale = scale
+        self.microscope_dt = microscope_dt
+        self.padding = padding
+        self.downscale = downscale
+
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
+    def get_scene_bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """Get the bounding box of all visible mesh objects in the scene.
+        
+        Returns:
+            tuple: (min_coords, max_coords) representing the bounding box
+        """
+        visible_objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH' 
+                           and obj.visible_get()]
+        
+        if not visible_objects:
+            return np.zeros(3), np.zeros(3)
+        
+        # Get world space coordinates of all vertices
+        all_vertices = []
+        for obj in visible_objects:
+            mesh = obj.data
+            world_matrix = obj.matrix_world
+            for v in mesh.vertices:
+                world_co = world_matrix @ v.co
+                all_vertices.append(world_co)
+        
+        vertices_array = np.array(all_vertices)
+        min_coords = np.min(vertices_array, axis=0)
+        max_coords = np.max(vertices_array, axis=0)
+        
+        # Add padding
+        padding_array = np.array([self.padding] * 3)
+        min_coords -= padding_array
+        max_coords += padding_array
+        
+        return min_coords, max_coords
+
+    def world_to_grid_coords(self, world_coords: np.ndarray) -> np.ndarray:
+        """Convert world coordinates to grid coordinates.
+        
+        Args:
+            world_coords: World space coordinates
+            
+        Returns:
+            Grid coordinates
+        """
+        min_coords, max_coords = self.get_scene_bounds()
+        # Normalize coordinates to [0, 1] range
+        normalized = (world_coords - min_coords) / (max_coords - min_coords)
+        # Scale to grid size
+        return normalized * (np.array(self.resolution) - 1)
+
+    def sample_mesh_points(self, obj: bpy.types.Object, num_points: int = 200000) -> np.ndarray:
+        """Sample points densely and uniformly from a mesh object.
+        
+        Args:
+            obj: The mesh object to sample from
+            num_points: Number of points to sample (increased for better coverage)
+            
+        Returns:
+            Array of sampled points in world coordinates
+        """
+        # Get the mesh data
+        mesh = obj.data
+        bm = bmesh.new()
+        bm.from_mesh(mesh)
+        bm.faces.ensure_lookup_table()
+        
+        # Calculate total area for weighted sampling
+        total_area = sum(f.calc_area() for f in bm.faces)
+        
+        # Calculate points per face based on area
+        points_per_face = []
+        for face in bm.faces:
+            face_area = face.calc_area()
+            # Ensure at least 10 points per face for small faces
+            num_face_points = max(20, int(num_points * (face_area / total_area)))
+            points_per_face.append(num_face_points)
+        
+        # Sample points
+        points = []
+        for face, num_face_points in zip(bm.faces, points_per_face):
+            # Get face vertices
+            verts = face.verts
+            if len(verts) > 3:
+                # For non-triangular faces, use fan triangulation
+                center = Vector(face.calc_center_median())
+                for i in range(len(verts)):
+                    v1 = Vector(verts[i].co)
+                    v2 = Vector(verts[(i + 1) % len(verts)].co)
+                    v3 = center
+                    
+                    # Sample points in this triangle
+                    for _ in range(num_face_points // len(verts)):
+                        # Generate random barycentric coordinates
+                        r1, r2 = float(np.random.random()), float(np.random.random())
+                        if r1 + r2 > 1:
+                            r1, r2 = 1 - r1, 1 - r2
+                        
+                        # Calculate point position
+                        point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
+                        points.append(obj.matrix_world @ point)
+            else:
+                # For triangular faces
+                v1 = Vector(verts[0].co)
+                v2 = Vector(verts[1].co)
+                v3 = Vector(verts[2].co)
+                
+                # Sample points in this triangle
+                for _ in range(num_face_points):
+                    # Generate random barycentric coordinates
+                    r1, r2 = float(np.random.random()), float(np.random.random())
+                    if r1 + r2 > 1:
+                        r1, r2 = 1 - r1, 1 - r2
+                    
+                    # Calculate point position
+                    point = v1 + v2 * r1 - v1 * r1 + v3 * r2 - v1 * r2
+                    points.append(obj.matrix_world @ point)
+        
+        bm.free()
+        return np.array(points)
+
+    def points_to_volume(self, points: np.ndarray) -> np.ndarray:
+        """Convert point cloud to a 3D volume array with continuous surfaces.
+        
+        Args:
+            points: Array of points in world coordinates
+            
+        Returns:
+            3D volume array with continuous surfaces
+        """
+        # Convert points to grid coordinates
+        grid_points = self.world_to_grid_coords(points)
+        
+        # Create volume array
+        volume = np.zeros(self.resolution, dtype=np.float32)
+        
+        # Convert to integer coordinates
+        grid_points = grid_points.astype(int)
+        
+        # Filter points within bounds
+        mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
+        grid_points = grid_points[mask]
+        
+        # Mark voxels containing points
+        volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = 1.0
+        
+        # Use a single dilation operation to create continuous surfaces
+        from scipy import ndimage
+        volume = ndimage.binary_dilation(volume, structure=np.ones((2,2,2)))
+        
+        return volume
+
+    def downsample_volume(self, volume: np.ndarray) -> tuple[np.ndarray, tuple[float, float, float]]:
+        """Downsample the volume array and adjust the scale accordingly.
+        
+        Args:
+            volume: The original volume array
+            
+        Returns:
+            tuple: (downsampled_volume, new_scale)
+        """
+        if self.downscale is None:
+            return volume, self.scale
+            
+        if isinstance(self.downscale, int):
+            downscale = (self.downscale, self.downscale, self.downscale)
+        else:
+            downscale = self.downscale
+            
+        # Calculate new scale
+        new_scale = tuple(s * d for s, d in zip(self.scale, downscale))
+        
+        # Downsample using sum operation (preserves binary nature)
+        from scipy import ndimage
+        downsampled = ndimage.zoom(volume, 
+                                 (1/downscale[0], 1/downscale[1], 1/downscale[2]), 
+                                 order=0)  # order=0 for nearest neighbor
+        
+        return downsampled, new_scale
+
+    def run(self, scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
+        """Run the point cloud export process for each frame.
+
+        Args:
+            scene: The Blender scene.
+            depsgraph: The dependency graph.
+        """
+        # export every microscope_dt
+        if scene.frame_current % self.microscope_dt != 0:
+            return
+
+        # Determine the time step index based on the current frame
+        time_step = scene.frame_current // self.microscope_dt
+
+        # Create a folder for this time step
+        time_step_dir = os.path.join(self.output_dir, f"T{time_step:03d}")
+        if not os.path.exists(time_step_dir):
+            os.makedirs(time_step_dir)
+
+        # Get all visible mesh objects
+        visible_objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH' 
+                           and obj.visible_get()]
+        
+        # Sample points from all meshes
+        all_points = []
+        for obj in visible_objects:
+            points = self.sample_mesh_points(obj)
+            all_points.append(points)
+        
+        # Combine all points
+        combined_points = np.vstack(all_points)
+        
+        # Convert to volume
+        volume = self.points_to_volume(combined_points)
+        
+        # Save full resolution as NetCDF
+        import xarray as xr
+        
+        # Create coordinate arrays based on scale
+        z_coords = np.arange(self.resolution[0]) * self.scale[0]
+        y_coords = np.arange(self.resolution[1]) * self.scale[1]
+        x_coords = np.arange(self.resolution[2]) * self.scale[2]
+        
+        # Create dataset
+        ds = xr.Dataset(
+            data_vars={
+                'volume': (['z', 'y', 'x'], volume)
+            },
+            coords={
+                'z': z_coords,
+                'y': y_coords,
+                'x': x_coords
+            },
+            attrs={
+                'description': '3D volume representation of point cloud data',
+                'units': 'microns',
+                'frame': scene.frame_current,
+                'num_points': len(combined_points)
+            }
+        )
+        
+        # Save full resolution to NetCDF
+        output_path = os.path.join(time_step_dir, f"point_cloud_volume.nc")
+        ds.to_netcdf(output_path)
+        
+        # Save downsampled version if requested
+        if self.downscale is not None:
+            downsampled_volume, new_scale = self.downsample_volume(volume)
+            
+            # Create coordinate arrays for downsampled version
+            z_coords_ds = np.arange(downsampled_volume.shape[0]) * new_scale[0]
+            y_coords_ds = np.arange(downsampled_volume.shape[1]) * new_scale[1]
+            x_coords_ds = np.arange(downsampled_volume.shape[2]) * new_scale[2]
+            
+            # Create dataset for downsampled version
+            ds_ds = xr.Dataset(
+                data_vars={
+                    'volume': (['z', 'y', 'x'], downsampled_volume)
+                },
+                coords={
+                    'z': z_coords_ds,
+                    'y': y_coords_ds,
+                    'x': x_coords_ds
+                },
+                attrs={
+                    'description': 'Downsampled 3D volume representation of point cloud data',
+                    'units': 'microns',
+                    'frame': scene.frame_current,
+                    'num_points': len(combined_points),
+                    'downscale_factor': self.downscale
+                }
+            )
+            
+            # Save downsampled version to NetCDF
+            output_path_ds = os.path.join(time_step_dir, f"point_cloud_volume_downsampled.nc")
+            ds_ds.to_netcdf(output_path_ds)
+            
+        print(f"Saved point cloud volumes for frame {scene.frame_current}")
