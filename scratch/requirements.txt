@@ -1,0 +1,8 @@
+tifffile>=2023.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.8
+scikit-image>=0.21.0
+tqdm>=4.65.0
+Pillow>=10.0.0 
