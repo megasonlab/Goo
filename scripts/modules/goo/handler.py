@@ -162,7 +162,6 @@ class RecenterHandler(Handler):
     cell-associated adhesion locations every frame."""
 
     def run(self, scene, depsgraph):
-
         cells = self.get_cells()
 
         cell_number = len(cells)
@@ -187,17 +186,22 @@ class RecenterHandler(Handler):
         for cell in self.get_cells():
             cell.recenter()
 
-            cell_size = cell.major_axis().length() / 2
-            for force in cell.adhesion_forces:
-                if not force.enabled():
-                    continue
-                force.min_dist = cell_size - 0.4
-                force.max_dist = cell_size + 0.4
+            # Update adhesion forces if they exist
+            if hasattr(cell, 'adhesion_forces'):
+                cell_size = cell.major_axis().length() / 2
+                for force in cell.adhesion_forces:
+                    if not force.enabled():
+                        continue
+                    force.min_dist = cell_size - 0.4
+                    force.max_dist = cell_size + 0.4
 
-            if cell.motion_force:
+            # Update motion force if it exists
+            if hasattr(cell, 'motion_force') and cell.motion_force:
                 cell.move()
-                
-            cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
+            
+            # Update cloth modifier if it exists
+            if hasattr(cell, 'cloth_mod') and cell.cloth_mod and hasattr(cell.cloth_mod, 'point_cache'):
+                cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
 
 
 class GrowthPIDHandler(Handler):

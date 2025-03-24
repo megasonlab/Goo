@@ -1,13 +1,13 @@
 # Makefile for Goo setup
 
 # Change the following two paths:
-BLENDER_PATH = /Applications/Blender-4.0.app/Contents/MacOS/Blender
-BPY_PATH = /Applications/Blender-4.0.app/Contents/Resources/4.0/python/bin/python3.10
+BLENDER_PATH = /Users/antoine/Harvard/MegasonLab/build_darwin/bin/Blender.app/Contents/MacOS/Blender
+BPY_PATH = /Users/antoine/Harvard/MegasonLab/build_darwin/bin/Blender.app/Contents/Resources/4.5/python/bin/python3.11
 
 # Do not change these options!
 VENV_DIR = .blender_venv
 HOOK_DIR = hook
-VENV_PACKAGES = $(VENV_DIR)/lib/python3.10/site-packages
+VENV_PACKAGES = $(VENV_DIR)/lib/python3.11/site-packages
 VENV_PYTHON = $(VENV_DIR)/bin/python
 HOOK_PACKAGES = $(HOOK_DIR)/scripts/modules
 

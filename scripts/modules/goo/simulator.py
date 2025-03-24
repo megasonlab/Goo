@@ -156,8 +156,9 @@ class Simulator:
         """Extend the scene to allow cloth physics to pass the default 250 frames."""
         cells = self.get_cells()
         for cell in cells:
-            if cell.cloth_mod and cell.cloth_mod.point_cache.frame_end < self.time:
-                cell.cloth_mod.point_cache.frame_end = self.time
+            if hasattr(cell, 'cloth_mod') and cell.cloth_mod and hasattr(cell.cloth_mod, 'point_cache'):
+                if cell.cloth_mod.point_cache.frame_end < self.time:
+                    cell.cloth_mod.point_cache.frame_end = self.time
 
     def add_handler(
         self,
