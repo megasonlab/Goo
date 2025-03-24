@@ -758,21 +758,26 @@ class SliceExporter(Handler):
             Default is 10.
         padding: The padding of the grid to save the point cloud data.
             Default is 5.0.
+        downscale: The downscaling factor for the low-resolution version.
+            Can be a single integer or a tuple of integers for each dimension.
+            Default is None (no downscaling).
     """
 
     def __init__(
         self,
         output_dir: str = "", 
-        resolution: tuple[int, int, int] = (128, 128, 128),
-        scale: tuple[float, float, float] = (1, 1, 1),
+        resolution: tuple[int, int, int] = (512, 512, 512),
+        scale: tuple[float, float, float] = (0.5, 0.5, 0.5),
         microscope_dt: int = 10,
-        padding: float = 5.0
+        padding: float = 5.0,
+        downscale: Union[int, tuple[int, int, int]] = None
     ):
         self.output_dir = output_dir
         self.resolution = resolution
         self.scale = scale
         self.microscope_dt = microscope_dt
         self.padding = padding
+        self.downscale = downscale
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
@@ -824,7 +829,7 @@ class SliceExporter(Handler):
         # Scale to grid size
         return normalized * (np.array(self.resolution) - 1)
 
-    def sample_mesh_points(self, obj: bpy.types.Object, num_points: int = 15000) -> np.ndarray:
+    def sample_mesh_points(self, obj: bpy.types.Object, num_points: int = 200000) -> np.ndarray:
         """Sample points densely and uniformly from a mesh object.
         
         Args:
@@ -895,13 +900,13 @@ class SliceExporter(Handler):
         return np.array(points)
 
     def points_to_volume(self, points: np.ndarray) -> np.ndarray:
-        """Convert point cloud to a 3D volume array.
+        """Convert point cloud to a 3D volume array with continuous surfaces.
         
         Args:
             points: Array of points in world coordinates
             
         Returns:
-            3D volume array
+            3D volume array with continuous surfaces
         """
         # Convert points to grid coordinates
         grid_points = self.world_to_grid_coords(points)
@@ -919,7 +924,39 @@ class SliceExporter(Handler):
         # Mark voxels containing points
         volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = 1.0
         
+        # Use a single dilation operation to create continuous surfaces
+        from scipy import ndimage
+        volume = ndimage.binary_dilation(volume, structure=np.ones((2,2,2)))
+        
         return volume
+
+    def downsample_volume(self, volume: np.ndarray) -> tuple[np.ndarray, tuple[float, float, float]]:
+        """Downsample the volume array and adjust the scale accordingly.
+        
+        Args:
+            volume: The original volume array
+            
+        Returns:
+            tuple: (downsampled_volume, new_scale)
+        """
+        if self.downscale is None:
+            return volume, self.scale
+            
+        if isinstance(self.downscale, int):
+            downscale = (self.downscale, self.downscale, self.downscale)
+        else:
+            downscale = self.downscale
+            
+        # Calculate new scale
+        new_scale = tuple(s * d for s, d in zip(self.scale, downscale))
+        
+        # Downsample using sum operation (preserves binary nature)
+        from scipy import ndimage
+        downsampled = ndimage.zoom(volume, 
+                                 (1/downscale[0], 1/downscale[1], 1/downscale[2]), 
+                                 order=0)  # order=0 for nearest neighbor
+        
+        return downsampled, new_scale
 
     def run(self, scene: bpy.types.Scene, depsgraph: bpy.types.Depsgraph):
         """Run the point cloud export process for each frame.
@@ -956,7 +993,7 @@ class SliceExporter(Handler):
         # Convert to volume
         volume = self.points_to_volume(combined_points)
         
-        # Save as NetCDF
+        # Save full resolution as NetCDF
         import xarray as xr
         
         # Create coordinate arrays based on scale
@@ -982,7 +1019,40 @@ class SliceExporter(Handler):
             }
         )
         
-        # Save to NetCDF
+        # Save full resolution to NetCDF
         output_path = os.path.join(time_step_dir, f"point_cloud_volume.nc")
         ds.to_netcdf(output_path)
-        print(f"Saved point cloud volume for frame {scene.frame_current}")
+        
+        # Save downsampled version if requested
+        if self.downscale is not None:
+            downsampled_volume, new_scale = self.downsample_volume(volume)
+            
+            # Create coordinate arrays for downsampled version
+            z_coords_ds = np.arange(downsampled_volume.shape[0]) * new_scale[0]
+            y_coords_ds = np.arange(downsampled_volume.shape[1]) * new_scale[1]
+            x_coords_ds = np.arange(downsampled_volume.shape[2]) * new_scale[2]
+            
+            # Create dataset for downsampled version
+            ds_ds = xr.Dataset(
+                data_vars={
+                    'volume': (['z', 'y', 'x'], downsampled_volume)
+                },
+                coords={
+                    'z': z_coords_ds,
+                    'y': y_coords_ds,
+                    'x': x_coords_ds
+                },
+                attrs={
+                    'description': 'Downsampled 3D volume representation of point cloud data',
+                    'units': 'microns',
+                    'frame': scene.frame_current,
+                    'num_points': len(combined_points),
+                    'downscale_factor': self.downscale
+                }
+            )
+            
+            # Save downsampled version to NetCDF
+            output_path_ds = os.path.join(time_step_dir, f"point_cloud_volume_downsampled.nc")
+            ds_ds.to_netcdf(output_path_ds)
+            
+        print(f"Saved point cloud volumes for frame {scene.frame_current}")

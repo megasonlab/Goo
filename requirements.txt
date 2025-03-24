@@ -2,7 +2,7 @@ antimony==2.14.0
 fake-bpy-module==20240524
 libroadrunner==2.7.0
 numpy==1.26.4
-scipy==1.14.0
+scipy==1.15.2
 Sphinx==7.3.7
 typing_extensions==4.12.2
 h5py==3.12.1

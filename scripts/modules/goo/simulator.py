@@ -1,9 +1,12 @@
 import sys
 import os
+import logging
 import numpy as np
 import bpy
+import io
 from enum import Enum, Flag, auto
 from typing import Union, List, Optional
+from contextlib import contextmanager
 
 from goo.handler import Handler, StopHandler
 from goo.cell import Cell, CellType
@@ -63,7 +66,12 @@ class Simulator:
         # Set up simulation time interval
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = self.time
-
+        
+        # Configure Blender's logging to filter dependency messages
+        bpy.app.debug_depsgraph = False
+        bpy.app.debug_wm = False
+        bpy.app.debug = False
+        
         # Set units to the metric system
         bpy.context.scene.unit_settings.system = "METRIC"
         bpy.context.scene.unit_settings.scale_length = 1e-6
