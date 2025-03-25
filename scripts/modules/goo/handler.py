@@ -348,12 +348,20 @@ class ColorizeHandler(Handler):
         cells = self.get_cells()
         red, blue = Vector((1.0, 0.0, 0.0)), Vector((0.0, 0.0, 1.0))
 
-        property_values = {
-            Colorizer.PRESSURE: np.array([cell.pressure for cell in cells]),
-            Colorizer.VOLUME: np.array([cell.volume() for cell in cells]),
-            Colorizer.GENE: np.array([cell.metabolites[self.gene] for cell in cells]) 
-            if self.gene else np.array([]),
-        }.get(self.colorizer, None)
+        property_values = None
+        if self.colorizer != Colorizer.RANDOM:
+            # Only gather property values if not in RANDOM mode
+            property_values = {
+                Colorizer.PRESSURE: np.array([
+                    cell.pressure if (cell.cloth_mod and 
+                                    hasattr(cell.cloth_mod, 'settings'))
+                    else 0.0 for cell in cells
+                ]),
+                Colorizer.VOLUME: np.array([cell.volume() for cell in cells]),
+                Colorizer.GENE: (np.array([cell.metabolites[self.gene] 
+                                         for cell in cells])
+                                if self.gene else np.array([])),
+            }.get(self.colorizer, None)
 
         if self.colorizer == Colorizer.RANDOM:
             # Assign colors in a deterministic sequence from the fixed palette
@@ -369,8 +377,10 @@ class ColorizeHandler(Handler):
 
         # Apply colors to cells
         for cell, value in zip(cells, values):
-            cell.recolor(value if self.colorizer == Colorizer.RANDOM 
-                         else tuple(blue.lerp(red, value)))
+            cell.recolor(
+                value if self.colorizer == Colorizer.RANDOM 
+                else tuple(blue.lerp(red, value))
+            )
                 
 
 def _get_divisions(cells: list[Cell]) -> list[tuple[str, str, str]]:
