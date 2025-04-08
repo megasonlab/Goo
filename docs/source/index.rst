@@ -14,7 +14,7 @@ It connects together cellular biomechanics, molecular diffusion in the extracell
 
 Users can takes advantage of Blender's rendering engines to render simulations in their preferred format, lighting, background and so much more. 
 
-Goo is hosted on Github at https://github.com/smegason/Goo.
+Goo is hosted on Github at https://github.com/megasonlab/Goo.
 
 Getting started
 ==================

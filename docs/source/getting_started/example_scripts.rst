@@ -123,7 +123,7 @@ Running this script in Blender produces the following simulation:
 
 
 2. Cell division based on volume growth
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------------
 
 Simulates cells dividing based on volume. 
 
@@ -142,7 +142,7 @@ Running this script in Blender produces the following simulation:
    
 
 3. Random cell mixing 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------------
 
 Simulates random motion and mixing of cells in a sphere. 
 
@@ -161,7 +161,7 @@ Running this script in Blender produces the following simulation:
 
 
 4. GRN-controlled cell motion
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------------
 
 This example introduces the simulation of gene regulation networks.
 
