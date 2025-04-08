@@ -94,7 +94,7 @@ HOOK_PACKAGES = $(HOOK_DIR)/scripts/modules
 
 TEST_DIR = unit_tests
 
-.PHONY: update_modules clean create_venv install_requirements create_hook test testone install setup_hook all info
+.PHONY: update_modules clean create_venv install_requirements create_hook test testone install setup_hook all info docs
 
 # --- Use these targets ---
 info:
@@ -105,6 +105,22 @@ info:
 	@printf "$(GREEN)Virtual environment directory:$(RESET) $(VENV_DIR)\n"
 	@printf "$(GREEN)Hook directory:$(RESET) $(HOOK_DIR)\n"
 	@printf "$(CYAN)$(BOLD)===========================$(RESET)\n"
+
+docs:
+	@if [ -z "$(BLENDER_PATH)" ]; then \
+		printf "$(RED)$(BOLD)Error:$(RESET) Please run 'make setup' first\n"; \
+		exit 1; \
+	fi
+	@printf "$(CYAN)$(BOLD)=== Building Documentation ===$(RESET)\n"
+	@printf "$(YELLOW)Cleaning previous build...$(RESET)\n"
+	@rm -rf docs/build
+	@printf "$(YELLOW)Building HTML documentation...$(RESET)\n"
+	@cd docs && $(BLENDER_PATH) --background --python-expr "import sys; sys.path.append('$(abspath $(HOOK_PACKAGES))'); from sphinx.cmd.build import main; exit_code = main(['source', 'build/html', '-b', 'html', '-W']); sys.exit(exit_code)" || { \
+		printf "$(RED)$(BOLD)Error:$(RESET) Documentation build failed\n"; \
+		exit 1; \
+	}
+	@printf "$(GREEN)✓ Documentation built successfully!$(RESET)\n"
+	@printf "$(YELLOW)Documentation is available at:$(RESET) docs/build/html/index.html\n"
 
 welcome:
 	@printf "$(CYAN)$(BOLD)=== Goo Setup ===$(RESET)\n"
@@ -184,6 +200,7 @@ help:
 	@printf "  $(YELLOW)info$(RESET)      - Show current setup information\n"
 	@printf "  $(YELLOW)setup$(RESET)     - Interactive setup for Goo\n"
 	@printf "  $(YELLOW)test$(RESET)      - Run tests (use t=path for specific test)\n"
+	@printf "  $(YELLOW)docs$(RESET)      - Build documentation using Blender Python\n"
 	@printf "  $(YELLOW)clean$(RESET)     - Clean all generated files\n"
 	@printf "  $(YELLOW)update_modules$(RESET) - Update hook modules\n"
 	@printf "\n"
