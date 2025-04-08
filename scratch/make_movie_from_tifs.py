@@ -7,6 +7,7 @@ import sys
 from tqdm import tqdm
 from skimage.transform import resize
 from PIL import Image
+from importlib import reload
 
 
 def normalize_to_uint8(frame):
@@ -201,4 +202,4 @@ if __name__ == "__main__":
         gif_fps=args.gif_fps,
         quality=args.quality,
         scale_factor=args.scale
-    ) 
+    )
