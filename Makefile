@@ -17,7 +17,16 @@ RESET = \033[0m
 # Initial setup
 .PHONY: setup
 setup:
-	@while true; do \
+	@if [ -f .blender_path ]; then \
+		printf "$(YELLOW)Found existing Blender configuration. Use it? (y/n): $(RESET)" >&2; \
+		read use_existing; \
+		if [ "$$use_existing" = "y" ]; then \
+			printf "$(GREEN)Using existing configuration...$(RESET)\n"; \
+			$(MAKE) _setup; \
+			exit 0; \
+		fi; \
+	fi; \
+	while true; do \
 		printf "$(YELLOW)Enter the path to your Blender executable: $(RESET)" >&2; \
 		read blender_path; \
 		if [ -f "$$blender_path" ]; then \
@@ -119,8 +128,8 @@ update_modules:
 
 clean:
 	@printf "$(YELLOW)$(BOLD)Cleaning up...$(RESET)\n"
-	@rm -rf $(VENV_DIR)
-	@rm -rf $(HOOK_DIR)
+	@rm -rf .blender_venv4.0 .blender_venv4.1
+	@rm -rf hook_blender*
 	@rm -rf temp_install
 	@printf "$(GREEN)Cleanup complete!$(RESET)\n"
 
@@ -164,7 +173,7 @@ create_hook:
 	@cp -a $(VENV_PACKAGES)/. $(HOOK_PACKAGES)/
 	@printf "$(GREEN)✓ Hook setup complete!$(RESET)\n"
 	@printf "$(YELLOW)Registering script directory in Blender...$(RESET)\n"
-	@$(BLENDER_PATH) --background --python-expr "import bpy; [bpy.ops.preferences.script_directory_remove(directory=dir.directory) for dir in bpy.context.preferences.filepaths.script_directories if 'Goo-blender' in dir.name]; bpy.ops.preferences.script_directory_add(directory='$(abspath $(HOOK_DIR))/scripts'); bpy.context.preferences.filepaths.script_directories[-1].name = 'Goo-blender-$(BLENDER_VERSION)'; bpy.ops.wm.save_userpref()"
+	@$(BLENDER_PATH) --background --python-expr "import bpy; [bpy.ops.preferences.script_directory_remove(index=i) for i, dir in enumerate(bpy.context.preferences.filepaths.script_directories) if 'Goo-blender' in dir.name]; bpy.ops.preferences.script_directory_add(directory='$(abspath $(HOOK_DIR))/scripts'); bpy.context.preferences.filepaths.script_directories[-1].name = 'Goo-blender-$(BLENDER_VERSION)'; bpy.ops.wm.save_userpref()"
 	@printf "$(GREEN)✓ Script directory registered in Blender preferences$(RESET)\n"
 
 all: clean setup
