@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "goo"
+version = "1.1.0"
+description = "Goo is a library to simulate 3D biological cells, tissues and embryos in Blender."
+authors = [
+    {name = "Antoine A. Ruzette"},
+    {name = "Sean Megason", email = "sean_megason@hms.harvard.edu"}
+]
+license = {text = "BSD 2-clause"}
+readme = "README.md"
+requires-python = ">=3.7"
+
+# Core dependencies that are common to all Blender versions
+dependencies = [
+    "typing_extensions>=4.12.2",
+    "h5py>=3.12.1",
+    "tifffile>=2025.3.13",
+    "xarray>=2025.3.0",
+    "antimony>=2.14.0",
+    "libroadrunner==2.7.0",
+]
+
+[project.optional-dependencies]
+# Blender 4.0 specific dependencies (Python 3.10)
+blender40 = [
+    "numpy==1.26.4",  # Last version supporting Python 3.10
+    "scipy==1.14.0",  # Last version supporting Python 3.10
+    "fake-bpy-module==20240524"
+]
+
+# Blender 4.5 specific dependencies (Python 3.11)
+blender45 = [
+    "numpy>=1.26.4",  # Latest version for Python 3.11
+    "scipy>=1.14.0",  # Latest version for Python 3.11
+    "fake-bpy-module==20240524"
+]
+
+# Development tools
+dev = [
+    "pytest==8.3.4",
+    "Sphinx==7.3.7",
+    "sphinx_copybutton==0.5.2",
+    "furo==2024.8.6",
+    "sphinxcontrib.video==0.3.1"
+]
+
+# Documentation tools
+docs = [
+    "Sphinx==7.3.7",
+    "sphinx_copybutton==0.5.2",
+    "furo==2024.8.6",
+    "sphinxcontrib.video==0.3.1"
+]

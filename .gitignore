@@ -33,6 +33,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Blender virtual environments and hooks
+.blender_venv*/
+hook_blender*/
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -127,6 +131,7 @@ celerybeat.pid
 .env
 .venv
 .blender_venv
+.blender_path
 env/
 venv/
 ENV/
@@ -194,5 +199,8 @@ pyrightconfig.json
 # Ignore all local history of files
 .history
 .ionide
+
+# Scratch directory for testing and development
+scratch/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,macos
