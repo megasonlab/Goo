@@ -12,19 +12,12 @@
 import os
 import sys
 
-# Blender python interpreter
-BL_PYTHON_PATH = (
-    "/Applications/Blender-4.0.app/Contents/Resources/4.0/python/bin/python3.10"
-)
-
-sys.path.insert(0, os.path.abspath("../../scripts/modules"))
-
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Goo"
-copyright = "2024, Antoine Ruzette, Charles Dai, Sean Megason"
-author = "Antoine Ruzette, Charles Dai, Sean Megason"
+copyright = "2024, Antoine Ruzette, Sean Megason"
+author = "Antoine Ruzette, Sean Megason"
 # release = "1.0.0"
 master_doc = "index"
 
@@ -49,7 +42,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "Goo-v1.0"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 
