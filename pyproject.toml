@@ -14,7 +14,7 @@ dynamic = ["version"]
 description = "Goo is a library to simulate 3D biological cells, tissues and embryos in Blender."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "BSD-2-Clause" }
+license = { text = "BSD-3-Clause" }
 authors = [
     { name = "Antoine A. Ruzette" },
     { name = "Sean Megason", email = "sean_megason@hms.harvard.edu" }
@@ -79,26 +79,93 @@ docs = [
 ]
 
 [project.urls]
-homepage = "https://github.com/MegasonLab/Goo"
-repository = "https://github.com/MegasonLab/Goo"
+homepage = "https://megasonlab.github.io/Goo/"
+repository = "https://github.com/megasonlab/Goo"
+documentation = "https://megasonlab.github.io/Goo/"
 
 [tool.uv.sources]
 goo = { workspace = true }
 
 [tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Same as Black.
 line-length = 88
-src = ["src"]
+
+# Enable Pyflakes `F` codes by default.
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific rules
+]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Assume Python 3.10
+target-version = "py310"
 
 [tool.ruff.lint]
-select = [
-    "E",    # style errors
-    "W",    # style warnings
-    "F",    # flakes
-    "I",    # isort
-    "UP",   # pyupgrade
-    "B",    # flake8-bugbear
-    "RUF",  # ruff-specific rules
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+ignore = [
+    "E402",  # module level import not at top of file (common in Blender scripts)
+    "E501",  # line too long (handled by line-length)
+    "W503",  # line break before binary operator (PEP 8 style)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # Allow longer lines in test files
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.isort]
+known-first-party = ["goo"]
+combine-as-imports = true
+force-single-line = false
+force-wrap-aliases = true
+lines-after-imports = 2
+lines-between-types = 1
+order-by-type = true
+split-on-trailing-comma = true
+
+[tool.ruff.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 files = "src/**/"
