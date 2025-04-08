@@ -26,6 +26,6 @@ sim.add_handlers(
     [
         goo.GrowthPIDHandler(),
         goo.RecenterHandler(),
-        goo.RandomMotionHandler(goo.ForceDist.GAUSSIAN, max_strength=750),
+        goo.RandomMotionHandler(goo.ForceDist.GAUSSIAN, strength=750),
     ]
 )

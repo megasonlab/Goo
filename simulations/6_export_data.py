@@ -16,7 +16,7 @@ sim.add_handlers(
     [
         goo.GrowthPIDHandler(),
         goo.RecenterHandler(),
-        goo.RandomMotionHandler(distribution=goo.ForceDist.UNIFORM, max_strength=250),
+        goo.RandomMotionHandler(distribution=goo.ForceDist.UNIFORM, strength=250),
         goo.DataExporter(
             path="tmp/out.json",
             options=goo.DataFlag.CELL_CONCENTRATIONS
