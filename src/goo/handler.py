@@ -78,7 +78,7 @@ class StopHandler(Handler):
                 cell.disable_physics()
                 cell.remesh()
         else:
-            frame_str = f"Calculating dddd frame {scene.frame_current}"
+            frame_str = f"Calculating frame {scene.frame_current}"
             total_length = len(frame_str) + 8
             border_line = "=" * total_length
 
