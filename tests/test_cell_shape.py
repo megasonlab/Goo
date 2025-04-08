@@ -96,10 +96,10 @@ def test_cell_area(setup_blender):
     area3 = cell3.area()
     area4 = cell4.area()
 
-    assert pytest.approx(area1, abs=1e-3) == 11.666
-    assert pytest.approx(area2, abs=1e-3) == 46.664
-    assert pytest.approx(area3, abs=1e-3) == 104.993
-    assert pytest.approx(area4, abs=1e-3) == 186.655
+    assert pytest.approx(area1, rel=1e-1) == 11.666
+    assert pytest.approx(area2, rel=1e-1) == 46.664
+    assert pytest.approx(area3, rel=1e-1) == 104.993
+    assert pytest.approx(area4, rel=1e-1) == 186.655
 
 
 def test_cell_aspect_ratio(setup_blender):

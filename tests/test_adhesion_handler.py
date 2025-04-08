@@ -1,6 +1,5 @@
 import pytest
 import bpy
-import goo
 from goo import Cell, CellType
 from goo.force import *
 from goo.handler import RecenterHandler, GrowthPIDHandler

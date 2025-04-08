@@ -147,6 +147,6 @@ def test_recenter(setup_blender: Cell):
 def test_remesh(setup_blender: Cell):
     cell = setup_blender
     initial_vert_count = len(cell.vertices())
-    cell.remesh()
+    cell.remesh(voxel_size=0.1)  # Use a smaller voxel size
     new_vert_count = len(cell.vertices())
     assert new_vert_count != initial_vert_count
