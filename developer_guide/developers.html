@@ -347,12 +347,16 @@
 <section id="documentation">
 <h3>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h3>
 <p>Documentation uses Sphinx and follows Google-style docstrings. To build the docs:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>docs
-make<span class="w"> </span>clean
-make<span class="w"> </span>html
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>docs
 </pre></div>
 </div>
-<p><strong>Note for non-macOS users:</strong> Modify the <code class="docutils literal notranslate"><span class="pre">SPHINXBUILD</span></code> variable in <code class="docutils literal notranslate"><span class="pre">docs/Makefile</span></code> to point to your Blender executable.</p>
+<p>This will:</p>
+<ol class="arabic simple">
+<li><p>Use Blender’s Python interpreter to ensure compatibility</p></li>
+<li><p>Build HTML documentation in <code class="docutils literal notranslate"><span class="pre">docs/build/html</span></code></p></li>
+<li><p>Include all necessary dependencies from your setup</p></li>
+</ol>
+<p>The documentation will be available at <code class="docutils literal notranslate"><span class="pre">docs/build/html/index.html</span></code>.</p>
 <p>Publishing documentation:</p>
 <ol class="arabic simple">
 <li><p>Build the documentation as shown above</p></li>

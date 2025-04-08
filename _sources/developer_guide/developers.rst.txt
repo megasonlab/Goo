@@ -84,17 +84,21 @@ The project uses Ruff for code quality enforcement. The configuration in ``pypro
 - Type checking support
 
 Documentation
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 Documentation uses Sphinx and follows Google-style docstrings. To build the docs:
 
 .. code-block:: bash
 
-    cd docs
-    make clean
-    make html
+    make docs
 
-**Note for non-macOS users:** Modify the ``SPHINXBUILD`` variable in ``docs/Makefile`` to point to your Blender executable.
+This will:
+
+1. Use Blender's Python interpreter to ensure compatibility
+2. Build HTML documentation in ``docs/build/html``
+3. Include all necessary dependencies from your setup
+
+The documentation will be available at ``docs/build/html/index.html``.
 
 Publishing documentation:
 
