@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Learning resources" href="learning_resources.html" /><link rel="prev" title="Hardware recommendations" href="../getting_started/hardware.html" />
 
     <!-- Generated with Sphinx 7.3.7 and Furo 2024.08.06 -->
-        <title>Developer’s guide - Goo documentation</title>
+        <title>Developer’s Guide - Goo documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=75810a84" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -222,7 +222,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started/hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Developer’s guide</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -269,118 +269,111 @@
         </div>
         <article role="main" id="furo-main-content">
           <section id="developer-s-guide">
-<h1>Developer’s guide<a class="headerlink" href="#developer-s-guide" title="Link to this heading">¶</a></h1>
-<p>We recommend using Visual Studio Code (VSCode) as code editor.</p>
-<section id="contributing-to-the-codebase">
-<h2>Contributing to the codebase<a class="headerlink" href="#contributing-to-the-codebase" title="Link to this heading">¶</a></h2>
-<ol class="arabic simple">
-<li><p>Fork the <a class="reference external" href="https://github.com/smegason/Goo">github repository</a>.</p></li>
-<li><p>Clone your fork repository within VSCode.</p></li>
-<li><p>Install dependencies: follow the steps of the <a class="reference external" href="https://smegason.github.io/Goo/getting_started/installation.html">installation guide</a>.</p></li>
-<li><p>Install the <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=JacquesLucke.blender-development">Blender developer’s extension</a> developed by Jacques Lucke inside VSCode.</p></li>
+<h1>Developer’s Guide<a class="headerlink" href="#developer-s-guide" title="Link to this heading">¶</a></h1>
+<section id="development-environment">
+<h2>Development Environment<a class="headerlink" href="#development-environment" title="Link to this heading">¶</a></h2>
+<p>We recommend using either Visual Studio Code (VS Code) or Cursor as your primary IDE. The project uses a <code class="docutils literal notranslate"><span class="pre">Makefile</span></code> to manage the development environment and provides a robust setup for working with Blender’s Python ecosystem.</p>
+<section id="development-setup">
+<h3>Development Setup<a class="headerlink" href="#development-setup" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p><strong>Fork and Clone</strong></p>
+<p>Start by forking and cloning the <a class="reference external" href="https://github.com/megasonlab/Goo">Goo repository</a>.</p>
+</li>
+<li><p><strong>Install Development Dependencies</strong></p>
+<p>Run the setup command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>setup
+</pre></div>
+</div>
+<p>The setup process will:</p>
+<ul class="simple">
+<li><p>Prompt for your Blender executable path</p></li>
+<li><p>Create a virtual environment with the correct Python version</p></li>
+<li><p>Install all required dependencies</p></li>
+<li><p>Set up Blender hooks for development</p></li>
+</ul>
+<p><strong>Blender Executable Location:</strong></p>
+<ul class="simple">
+<li><p>macOS: <code class="docutils literal notranslate"><span class="pre">/Applications/Blender-x.x.app/Contents/MacOS/Blender</span></code></p></li>
+<li><p>Windows: <code class="docutils literal notranslate"><span class="pre">C:\Program</span> <span class="pre">Files\Blender</span> <span class="pre">Foundation\Blender</span> <span class="pre">x.x\blender.exe</span></code></p></li>
+</ul>
+<p>The path is saved in <code class="docutils literal notranslate"><span class="pre">.blender_path</span></code> for future use. Subsequent <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">setup</span></code> runs will offer to reuse this configuration.</p>
+</li>
+<li><p><strong>Configure Your IDE</strong></p>
+<p>For VS Code users, we recommend installing:</p>
+<ul class="simple">
+<li><p>Python extension</p></li>
+<li><p>Ruff extension for linting and formatting</p></li>
+</ul>
+<p>The project includes pre-configured settings in <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> for:</p>
+<ul class="simple">
+<li><p>Code formatting (88 character line length)</p></li>
+<li><p>Import sorting</p></li>
+<li><p>Linting rules optimized for Blender development</p></li>
+</ul>
+</li>
 </ol>
 </section>
-<section id="installing-new-packages">
-<h2>Installing new packages<a class="headerlink" href="#installing-new-packages" title="Link to this heading">¶</a></h2>
-<ol class="arabic simple">
-<li><p>Activate the virtual environment created during installation and install desired packages:</p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>.blender_env<span class="se">\\</span>Scripts<span class="se">\\</span>activate
-pip<span class="w"> </span>install<span class="w"> </span>&lt;package&gt;
-</pre></div>
-</div>
-<ol class="arabic simple" start="2">
-<li><p>Update the <cite>hook/modules</cite> folder:</p></li>
-</ol>
-<p>macOS:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>update_modules
-</pre></div>
-</div>
-<p>Windows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>rmdir<span class="w"> </span>/S<span class="w"> </span>/Q<span class="w"> </span>hook
-mkdir<span class="w"> </span>hook<span class="se">\\</span>scripts<span class="se">\\</span>modules
-xcopy<span class="w"> </span>.blender_venv<span class="se">\\</span>lib<span class="se">\\</span>python3.10<span class="se">\\</span>site-packages<span class="se">\\</span>*<span class="w"> </span>hook<span class="se">\\</span>scripts<span class="se">\\</span>modules<span class="w"> </span>/E<span class="w"> </span>/H<span class="w"> </span>/I
-</pre></div>
-</div>
 </section>
-<section id="testing-your-code">
-<h2>Testing your code<a class="headerlink" href="#testing-your-code" title="Link to this heading">¶</a></h2>
-<p>We developed a suite of tests to ensure the correct functioning of the codebase. They do not cover all possible cases, but they are a good starting point. Also, they do not test the realism and accuracy of the physics simulations.</p>
-<ol class="arabic simple">
-<li><p>We use pytest from within Blender’s Python interpreter to run tests. Make sure to install the <cite>pytest</cite> library in your Blender Python environment.</p></li>
-<li><p>A suite of test cases can be found inside the <cite>/tests</cite> folder.</p></li>
-<li><p>To run the suite of tests, open a terminal in VSCode and run the following command from the codebase root directory. Make sure to replace the path to the Blender executable with the correct path on your system.</p></li>
-</ol>
-<p>macOS:</p>
+<section id="development-workflow">
+<h2>Development Workflow<a class="headerlink" href="#development-workflow" title="Link to this heading">¶</a></h2>
+<section id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Link to this heading">¶</a></h3>
+<p>Run the test suite with:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span><span class="nb">test</span>
 </pre></div>
 </div>
-<p>or</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>/Applications/Blender-4.0.app/Contents/MacOS/Blender<span class="w"> </span>--background<span class="w">  </span>--python-expr<span class="w"> </span><span class="s2">&quot;import pytest; pytest.main([&#39;-v&#39;, &#39;./tests&#39;])&quot;</span>
+<p>To run a specific test file:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="nv">t</span><span class="o">=</span>tests/path/to/test.py
 </pre></div>
 </div>
-<p>Windows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="s2">&quot;C:\Program Files\Blender Foundation\Blender 4.0\blender.exe&quot;</span><span class="w"> </span>--background<span class="w">  </span>--python-expr<span class="w"> </span><span class="s2">&quot;import pytest; pytest.main([&#39;-v&#39;, &#39;./tests&#39;])&quot;</span>
+<p>The test suite:</p>
+<ul class="simple">
+<li><p>Runs in Blender’s Python environment</p></li>
+<li><p>Uses pytest for testing</p></li>
+<li><p>Includes unit tests for core functionality</p></li>
+<li><p>Excludes physics simulation accuracy tests</p></li>
+</ul>
+</section>
+<section id="code-quality">
+<h3>Code Quality<a class="headerlink" href="#code-quality" title="Link to this heading">¶</a></h3>
+<p>The project uses Ruff for code quality enforcement. The configuration in <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> follows:</p>
+<ul class="simple">
+<li><p>Google-style docstrings</p></li>
+<li><p>PEP 8 style guide with specific adaptations for Blender</p></li>
+<li><p>Automatic import sorting</p></li>
+<li><p>Type checking support</p></li>
+</ul>
+</section>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h3>
+<p>Documentation uses Sphinx and follows Google-style docstrings. To build the docs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>docs
+make<span class="w"> </span>clean
+make<span class="w"> </span>html
 </pre></div>
 </div>
-<ol class="arabic simple" start="4">
-<li><p>All tests should pass before submitting a pull request.</p></li>
-<li><p>If you are adding new features, please add tests to cover the new functionality. See the existing test cases for examples.</p></li>
+<p><strong>Note for non-macOS users:</strong> Modify the <code class="docutils literal notranslate"><span class="pre">SPHINXBUILD</span></code> variable in <code class="docutils literal notranslate"><span class="pre">docs/Makefile</span></code> to point to your Blender executable.</p>
+<p>Publishing documentation:</p>
+<ol class="arabic simple">
+<li><p>Build the documentation as shown above</p></li>
+<li><p>Copy contents from <code class="docutils literal notranslate"><span class="pre">docs/build/html</span></code> to a temporary directory</p></li>
+<li><p>Switch to the <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch</p></li>
+<li><p>Copy the contents from the temporary directory to the root</p></li>
+<li><p>Commit and create a pull request</p></li>
 </ol>
 </section>
-<section id="update-the-documentation">
-<h2>Update the documentation<a class="headerlink" href="#update-the-documentation" title="Link to this heading">¶</a></h2>
-<ol class="arabic simple">
-<li><p>Install dependencies about outlined above</p></li>
-<li><p>In your local Goo codebase</p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>docs
-</pre></div>
-</div>
-<ol class="arabic simple" start="3">
-<li><p>Modify source files: make modifications to the source .rst files or to the codebase. Code documentation follows <a class="reference external" href="https://www.sphinx-doc.org/en/master/">sphynx</a> syntax.</p></li>
-</ol>
-<p>4. Running the build
-Due to some dependencies from Blender (i.e. <cite>bpy</cite>), the build has to be ran from Blender using its Python interpreter. The docs directory contains a modified <cite>Makefile</cite> so that it manually uses Blender executable. It should be ready-to-use for MacOS users. Other platform users should modify the ‘SPHINXBUILD’ variable so that it points towards a Blender executable file path in <cite>Makefile</cite>.</p>
-<div class="highlight-make notranslate"><div class="highlight"><pre><span></span><span class="c"># Minimal makefile for Sphinx documentation</span>
-<span class="c">#</span>
-
-<span class="c"># You can set these variables from the command line, and also</span>
-<span class="c"># from the environment for the first two.</span>
-<span class="nv">SPHINXOPTS</span><span class="w">    </span><span class="o">?=</span>
-<span class="nv">SPHINXBUILD</span><span class="w">   </span><span class="o">?=</span><span class="w"> </span>sphinx-build
-<span class="nv">SOURCEDIR</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="nb">source</span>
-<span class="nv">BUILDDIR</span><span class="w">      </span><span class="o">=</span><span class="w"> </span>build
-
-<span class="c"># Put it first so that &quot;make&quot; without argument is like &quot;make help&quot;.</span>
-<span class="nf">help</span><span class="o">:</span>
-<span class="w">	</span>@<span class="k">$(</span>SPHINXBUILD<span class="k">)</span><span class="w"> </span>-M<span class="w"> </span><span class="nb">help</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>SOURCEDIR<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>BUILDDIR<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="k">$(</span>SPHINXOPTS<span class="k">)</span><span class="w"> </span><span class="k">$(</span>O<span class="k">)</span>
-
-<span class="nf">.PHONY</span><span class="o">:</span><span class="w"> </span><span class="n">help</span> <span class="n">Makefile</span>
-
-<span class="c"># Catch-all target: route all unknown targets to Sphinx using the new</span>
-<span class="c"># &quot;make mode&quot; option.  $(O) is meant as a shortcut for $(SPHINXOPTS).</span>
-<span class="nf">%</span><span class="o">:</span><span class="w"> </span><span class="n">Makefile</span>
-<span class="w">	</span>@<span class="k">$(</span>SPHINXBUILD<span class="k">)</span><span class="w"> </span>-M<span class="w"> </span><span class="nv">$@</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>SOURCEDIR<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>BUILDDIR<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="k">$(</span>SPHINXOPTS<span class="k">)</span><span class="w"> </span><span class="k">$(</span>O<span class="k">)</span>
-
-<span class="nf">clean</span><span class="o">:</span>
-<span class="w">	</span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="k">$(</span>BUILDDIR<span class="k">)</span>
-
-<span class="nf">api</span><span class="o">:</span>
-<span class="w">	</span>sphinx-apidoc<span class="w"> </span>-e<span class="w"> </span>-o<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>SOURCEDIR<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>../scripts/modules/
-</pre></div>
-</div>
-<p>Then, running the build will update the documentation in the <cite>/build</cite> directory. It will also automatically update the library documentation using Sphynx’s <cite>automodule</cite>.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>clean<span class="w"> </span><span class="c1"># clean up the build directory</span>
-make<span class="w"> </span>html<span class="w"> </span><span class="c1"># populate the build directory</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="5">
-<li><p>Move the content of the <cite>docs/build/html`</cite> directory to the root of the <cite>gh-pages</cite> branch using a <cite>tmp/</cite> folder on your local machine. Then push the changes to the remote repository with:</p></li>
-</ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Update docs&quot;</span>
-git<span class="w"> </span>push<span class="w"> </span>-f
+</section>
+<section id="useful-commands">
+<h2>Useful Commands<a class="headerlink" href="#useful-commands" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">info</span></code>: Display current configuration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code>: Clean build artifacts and hook directories</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">update_modules</span></code>: Update Blender hook modules</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">setup</span></code>: Initial setup or reconfiguration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code>: Run test suite</p></li>
+</ul>
+<p>For a complete list of available commands, run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span><span class="nb">help</span>
 </pre></div>
 </div>
 </section>
@@ -441,11 +434,18 @@ git<span class="w"> </span>push<span class="w"> </span>-f
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Developer’s guide</a><ul>
-<li><a class="reference internal" href="#contributing-to-the-codebase">Contributing to the codebase</a></li>
-<li><a class="reference internal" href="#installing-new-packages">Installing new packages</a></li>
-<li><a class="reference internal" href="#testing-your-code">Testing your code</a></li>
-<li><a class="reference internal" href="#update-the-documentation">Update the documentation</a></li>
+<li><a class="reference internal" href="#">Developer’s Guide</a><ul>
+<li><a class="reference internal" href="#development-environment">Development Environment</a><ul>
+<li><a class="reference internal" href="#development-setup">Development Setup</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#development-workflow">Development Workflow</a><ul>
+<li><a class="reference internal" href="#testing">Testing</a></li>
+<li><a class="reference internal" href="#code-quality">Code Quality</a></li>
+<li><a class="reference internal" href="#documentation">Documentation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#useful-commands">Useful Commands</a></li>
 </ul>
 </li>
 </ul>

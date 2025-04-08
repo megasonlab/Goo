@@ -222,7 +222,7 @@
 <li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -272,7 +272,7 @@
 <span id="id1"></span><h1>Example scripts<a class="headerlink" href="#example-scripts" title="Link to this heading">¶</a></h1>
 <section id="writing-your-first-script-a-tutorial">
 <h2>1. Writing your first script: a tutorial<a class="headerlink" href="#writing-your-first-script-a-tutorial" title="Link to this heading">¶</a></h2>
-<p>Examples of simulation script can be found in the <cite>/simulations/</cite> folder, located <a class="reference external" href="https://github.com/smegason/Goo/tree/main/simulations">here</a>.
+<p>Examples of simulation script can be found in the <cite>/simulations/</cite> folder, located <a class="reference external" href="https://github.com/megasonlab/Goo/tree/main/simulations">here</a>.
 Goo extends Blender towards agent-based simulations of cell mechanics, molecular reactions and gene regulatory networks.
 With Goo, you can create custom scripts to simulate various cellular phenomena by specifying initial conditions and parameters.</p>
 <section id="running-scripts">
@@ -357,11 +357,9 @@ Add handlers to the simulator to control these aspects. For example: these lines
 <p class="admonition-title">Note</p>
 <p>The full list of handlers–cell behaviors the library currently supports–can be found in the codebase documentation.</p>
 </div>
-</section>
-</section>
-<section id="modeling-growing-cell-doublets-with-differential-adhesion">
-<h2>2. Modeling growing cell doublets with differential adhesion<a class="headerlink" href="#modeling-growing-cell-doublets-with-differential-adhesion" title="Link to this heading">¶</a></h2>
-<p>This example simulates three cell doublets of varying stiffness and adhesion strength over ~150 minutes, ignoring heterotypic adhesion.</p>
+<p>When put all together, this is the script outlined:</p>
+<div class="dropdown admonition">
+<p class="admonition-title">Goo script</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">reload</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">goo</span>
 
@@ -401,10 +399,11 @@ Add handlers to the simulator to control these aspects. For example: these lines
 <span class="p">)</span>
 </pre></div>
 </div>
+</div>
 <p>Running this script in Blender produces the following simulation:</p>
 <video controls="True" loop="True" preload="auto" width="740"><source src="../_images/1_growing_doublets.mp4" type="video/mp4"></video></section>
 <section id="cell-division-based-on-volume-growth">
-<h2>3. Cell division based on volume growth<a class="headerlink" href="#cell-division-based-on-volume-growth" title="Link to this heading">¶</a></h2>
+<h3>2. Cell division based on volume growth<a class="headerlink" href="#cell-division-based-on-volume-growth" title="Link to this heading">¶</a></h3>
 <p>Simulates cells dividing based on volume.</p>
 <div class="dropdown admonition">
 <p class="admonition-title">Goo script</p>
@@ -440,16 +439,13 @@ Add handlers to the simulator to control these aspects. For example: these lines
 <p>Running this script in Blender produces the following simulation:</p>
 <video controls="True" loop="True" preload="auto" width="740"><source src="../_images/2_volume_dividing_cells0001-0250.mp4" type="video/mp4"></video></section>
 <section id="random-cell-mixing">
-<h2>4. Random cell mixing<a class="headerlink" href="#random-cell-mixing" title="Link to this heading">¶</a></h2>
-<p>Simulates random motion and mixing of cells.</p>
+<h3>3. Random cell mixing<a class="headerlink" href="#random-cell-mixing" title="Link to this heading">¶</a></h3>
+<p>Simulates random motion and mixing of cells in a sphere.</p>
 <div class="dropdown admonition">
 <p class="admonition-title">Goo script</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">reload</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">goo</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">goo</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-
-<span class="n">reload</span><span class="p">(</span><span class="n">goo</span><span class="p">)</span>
 <span class="n">goo</span><span class="o">.</span><span class="n">reset_modules</span><span class="p">()</span>
 <span class="n">goo</span><span class="o">.</span><span class="n">reset_scene</span><span class="p">()</span>
 
@@ -475,35 +471,33 @@ Add handlers to the simulator to control these aspects. For example: these lines
 
 
 <span class="c1"># Create cells within the sphere with minimum distance constraint</span>
-<span class="n">num_cells</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># Number of cells</span>
+<span class="n">num_cells</span> <span class="o">=</span> <span class="mi">8</span>  <span class="c1"># Number of cells</span>
 <span class="n">radius</span> <span class="o">=</span> <span class="mi">15</span>  <span class="c1"># Sphere radius</span>
-<span class="n">min_distance</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Mnimum distance between cells</span>
+<span class="n">min_distance</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Minimum distance between cells</span>
 
-<span class="n">goo</span><span class="o">.</span><span class="n">create_boundary</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="n">radius</span><span class="p">)</span>
+<span class="n">goo</span><span class="o">.</span><span class="n">create_boundary</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="n">radius</span> <span class="o">*</span> <span class="mf">1.2</span><span class="p">)</span>
 
-<span class="n">cellsA</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">)</span>
-<span class="n">cellsA</span><span class="o">.</span><span class="n">homo_adhesion_strength</span> <span class="o">=</span> <span class="mi">150</span>
-<span class="n">cellsA</span><span class="o">.</span><span class="n">motion_strength</span> <span class="o">=</span> <span class="mi">1500</span>
+<span class="n">cellsA</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;cellA&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">70</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">)</span>
+<span class="n">cellsA</span><span class="o">.</span><span class="n">homo_adhesion_strength</span> <span class="o">=</span> <span class="mi">250</span>
 <span class="n">cells</span> <span class="o">=</span> <span class="p">[]</span>
 
 <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">num_cells</span><span class="p">:</span>
     <span class="n">new_point</span> <span class="o">=</span> <span class="n">random_point_inside_sphere</span><span class="p">(</span><span class="n">radius</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">check_min_distance</span><span class="p">(</span><span class="n">new_point</span><span class="p">,</span> <span class="n">cells</span><span class="p">,</span> <span class="n">min_distance</span><span class="p">):</span>
         <span class="n">cells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_point</span><span class="p">)</span>
-        <span class="n">cell_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;cell_A</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">cell_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;cellA</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="n">color</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random_sample</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
-        <span class="n">cell</span> <span class="o">=</span> <span class="n">cellsA</span><span class="o">.</span><span class="n">create_cell</span><span class="p">(</span><span class="n">cell_name</span><span class="p">,</span> <span class="n">new_point</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
-        <span class="n">cell</span><span class="o">.</span><span class="n">stiffness</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">cell</span><span class="o">.</span><span class="n">pressure</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="n">cell</span> <span class="o">=</span> <span class="n">cellsA</span><span class="o">.</span><span class="n">create_cell</span><span class="p">(</span><span class="n">cell_name</span><span class="p">,</span> <span class="n">new_point</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">cell</span><span class="o">.</span><span class="n">stiffness</span> <span class="o">=</span> <span class="mi">5</span>
 
-<span class="n">sim</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Simulator</span><span class="p">([</span><span class="n">cellsA</span><span class="p">],</span> <span class="n">time</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">physics_dt</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">sim</span><span class="o">.</span><span class="n">setup_world</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">2024</span><span class="p">)</span>
+<span class="n">sim</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">celltypes</span><span class="o">=</span><span class="p">[</span><span class="n">cellsA</span><span class="p">],</span> <span class="n">time</span><span class="o">=</span><span class="mi">230</span><span class="p">,</span> <span class="n">physics_dt</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">sim</span><span class="o">.</span><span class="n">setup_world</span><span class="p">()</span>
 <span class="n">sim</span><span class="o">.</span><span class="n">add_handlers</span><span class="p">(</span>
     <span class="p">[</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">GrowthPIDHandler</span><span class="p">(),</span>
+        <span class="n">goo</span><span class="o">.</span><span class="n">SizeDivisionHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">BisectDivisionLogic</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">RecenterHandler</span><span class="p">(),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">SizeDivisionHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">BisectDivisionLogic</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">105</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">RandomMotionHandler</span><span class="p">(</span><span class="n">distribution</span><span class="o">=</span><span class="n">goo</span><span class="o">.</span><span class="n">ForceDist</span><span class="o">.</span><span class="n">UNIFORM</span><span class="p">),</span>
+        <span class="n">goo</span><span class="o">.</span><span class="n">RandomMotionHandler</span><span class="p">(</span><span class="n">distribution</span><span class="o">=</span><span class="n">goo</span><span class="o">.</span><span class="n">ForceDist</span><span class="o">.</span><span class="n">GAUSSIAN</span><span class="p">,</span> <span class="n">strength</span><span class="o">=</span><span class="mi">2500</span><span class="p">),</span>
     <span class="p">]</span>
 <span class="p">)</span>
 </pre></div>
@@ -511,151 +505,65 @@ Add handlers to the simulator to control these aspects. For example: these lines
 </div>
 <p>Running this script in Blender produces the following simulation:</p>
 <video controls="True" loop="True" preload="auto" width="740"><source src="../_images/3_random_cell_mixing0001-0200.mp4" type="video/mp4"></video></section>
-<section id="blinking-cells-and-the-repressilator">
-<h2>5. Blinking cells and the repressilator<a class="headerlink" href="#blinking-cells-and-the-repressilator" title="Link to this heading">¶</a></h2>
+<section id="grn-controlled-cell-motion">
+<h3>4. GRN-controlled cell motion<a class="headerlink" href="#grn-controlled-cell-motion" title="Link to this heading">¶</a></h3>
 <p>This example introduces the simulation of gene regulation networks.</p>
 <p>We model cells that blink on and off, representing their gene concentration that is controlled by a gene regulatory network akin to a repressilator (Elowitz et al., 2000).
 To do so, we need to define a set of genes and their interactions. Here, gene X repress gene Z, gene Z repress gene Y, and gene Y repress gene X, and all genes degrades following first order equation. That is, the degradation of a gene concentration proceeds at a rate that is linearly proportional to the gene concentration itself.
-We declare two repressilator networks, one with a faster production rate than the other i.e. higher <cite>kcat</cite>, leading to a shorter period of oscillation. Cells are then populated with these networks and initial gene concentrations.</p>
-<p>Other than that, cells still homotypically adhere, move, grow and divide.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
-<span class="n">z</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
+We declare two repressilator networks, one with a faster production rate than the other i.e. higher <cite>kcat</cite>, leading to a shorter period of oscillation. Cells are then populated with these networks and initial gene concentrations.
+Then, the concentration of gene X is linked to the motion strength of the cell. High concentrations of gene X lead to high motion strength, and low concentrations lead to low motion strength.</p>
+<p>Other than that, cells still homotypically adhere, grow and divide.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
 
-<span class="n">network1</span> <span class="o">=</span> <span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
-<span class="n">network1</span><span class="o">.</span><span class="n">load_circuits</span><span class="p">(</span>
-   <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-   <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-   <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-   <span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-   <span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-   <span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-<span class="p">)</span>
-
-<span class="n">network2</span> <span class="o">=</span> <span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
-<span class="n">network2</span><span class="o">.</span><span class="n">load_circuits</span><span class="p">(</span>
-   <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-   <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-   <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-   <span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-   <span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-   <span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-<span class="p">)</span>
-
-<span class="n">cell1</span><span class="o">.</span><span class="n">grn</span> <span class="o">=</span> <span class="n">network1</span>
-<span class="n">cell1</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">}</span>
-<span class="n">cell2</span><span class="o">.</span><span class="n">grn</span> <span class="o">=</span> <span class="n">network2</span>
-<span class="n">cell2</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">}</span>
-</pre></div>
-</div>
-<p>When put all together, this is the script that models blinking cells:</p>
-<div class="dropdown admonition">
-<p class="admonition-title">Goo script</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">reload</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">goo</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">goo.gene</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">goo.division</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">goo.handler</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-
-<span class="n">reload</span><span class="p">(</span><span class="n">goo</span><span class="p">)</span>
-<span class="n">goo</span><span class="o">.</span><span class="n">reset_modules</span><span class="p">()</span>
-<span class="n">goo</span><span class="o">.</span><span class="n">reset_scene</span><span class="p">()</span>
-
-<span class="c1"># Defining genes</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
-<span class="n">z</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
-
-<span class="n">celltype1</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;cellA&quot;</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>
-<span class="n">celltype1</span><span class="o">.</span><span class="n">homo_adhesion_strength</span> <span class="o">=</span> <span class="mi">500</span>
-<span class="n">celltype1</span><span class="o">.</span><span class="n">motion_strength</span> <span class="o">=</span> <span class="mi">1000</span>
-<span class="n">cell1</span> <span class="o">=</span> <span class="n">celltype1</span><span class="o">.</span><span class="n">create_cell</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;cell1&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-<span class="n">cell1</span><span class="o">.</span><span class="n">stiffness</span> <span class="o">=</span> <span class="mi">5</span>
-
-<span class="n">celltype2</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;cellB&quot;</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>
-<span class="n">celltype2</span><span class="o">.</span><span class="n">homo_adhesion_strength</span> <span class="o">=</span> <span class="mi">500</span>
-<span class="n">celltype2</span><span class="o">.</span><span class="n">motion_strength</span> <span class="o">=</span> <span class="mi">1000</span>
-<span class="n">cell2</span> <span class="o">=</span> <span class="n">celltype2</span><span class="o">.</span><span class="n">create_cell</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;cell1&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-<span class="n">cell2</span><span class="o">.</span><span class="n">stiffness</span> <span class="o">=</span> <span class="mi">5</span>
-
-<span class="n">network1</span> <span class="o">=</span> <span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
-<span class="n">network1</span><span class="o">.</span><span class="n">load_circuits</span><span class="p">(</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-<span class="p">)</span>
-<span class="n">cell1</span><span class="o">.</span><span class="n">grn</span> <span class="o">=</span> <span class="n">network1</span>
-<span class="n">cell1</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">}</span>
-
-<span class="n">network2</span> <span class="o">=</span> <span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
-<span class="n">network2</span><span class="o">.</span><span class="n">load_circuits</span><span class="p">(</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-<span class="p">)</span>
-<span class="n">cell2</span><span class="o">.</span><span class="n">grn</span> <span class="o">=</span> <span class="n">network2</span>
-<span class="n">cell2</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">}</span>
-
-<span class="n">sim</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Simulator</span><span class="p">(</span><span class="n">celltypes</span><span class="o">=</span><span class="p">[</span><span class="n">celltype1</span><span class="p">,</span> <span class="n">celltype2</span><span class="p">],</span> <span class="n">time</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">physics_dt</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">sim</span><span class="o">.</span><span class="n">setup_world</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="mi">2025</span><span class="p">)</span>
-<span class="n">sim</span><span class="o">.</span><span class="n">add_handlers</span><span class="p">(</span>
-    <span class="p">[</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">GrowthPIDHandler</span><span class="p">(),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">SizeDivisionHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">BisectDivisionLogic</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">RecenterHandler</span><span class="p">(),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">RandomMotionHandler</span><span class="p">(</span><span class="n">distribution</span><span class="o">=</span><span class="n">goo</span><span class="o">.</span><span class="n">ForceDist</span><span class="o">.</span><span class="n">GAUSSIAN</span><span class="p">),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">NetworkHandler</span><span class="p">(),</span>
-        <span class="n">goo</span><span class="o">.</span><span class="n">ColorizeHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">Colorizer</span><span class="o">.</span><span class="n">GENE</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span>
-    <span class="p">]</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p>Running this script in Blender produces the following simulation:</p>
-<video controls="True" loop="True" preload="auto" width="740"><source src="../_images/4_blinking_cells0001-0200.mp4" type="video/mp4"></video></section>
-<section id="controlling-cell-motility-with-gene-concentration">
-<h2>6. Controlling cell motility with gene concentration<a class="headerlink" href="#controlling-cell-motility-with-gene-concentration" title="Link to this heading">¶</a></h2>
-<p>In this example, the strength of the motion of a cell is controlled by the concentration of gene x,
-which itself is modeled as part of a repressilator regulatory network. The concentration of gene x oscillates;
-therefore, the speed of the cell oscillates between exploratory (fast motility) and stationary (low motility) periods.</p>
-<p>The script to model this behavior:</p>
-<div class="dropdown admonition">
-<p class="admonition-title">Goo script</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">reload</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">goo</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">goo.gene</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">goo.division</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">goo.handler</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
-
-<span class="n">reload</span><span class="p">(</span><span class="n">goo</span><span class="p">)</span>
-<span class="n">goo</span><span class="o">.</span><span class="n">reset_modules</span><span class="p">()</span>
-<span class="n">goo</span><span class="o">.</span><span class="n">reset_scene</span><span class="p">()</span>
-
-<span class="c1"># Defining genes</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
-<span class="n">z</span> <span class="o">=</span> <span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
-
-<span class="n">celltype</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;cellA&quot;</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>
+<span class="n">celltype</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;cellA&quot;</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">125</span><span class="p">)</span>
 <span class="n">celltype</span><span class="o">.</span><span class="n">homo_adhesion_strength</span> <span class="o">=</span> <span class="mi">500</span>
 <span class="n">celltype</span><span class="o">.</span><span class="n">motion_strength</span> <span class="o">=</span> <span class="mi">1000</span>
 <span class="n">cell</span> <span class="o">=</span> <span class="n">celltype</span><span class="o">.</span><span class="n">create_cell</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;cell1&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
 <span class="n">cell</span><span class="o">.</span><span class="n">stiffness</span> <span class="o">=</span> <span class="mi">5</span>
 
-<span class="n">network1</span> <span class="o">=</span> <span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
+<span class="n">network1</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
 <span class="n">network1</span><span class="o">.</span><span class="n">load_circuits</span><span class="p">(</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
-    <span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
-    <span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+   <span class="n">goo</span><span class="o">.</span><span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
+   <span class="n">goo</span><span class="o">.</span><span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
+   <span class="n">goo</span><span class="o">.</span><span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
+   <span class="n">goo</span><span class="o">.</span><span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+   <span class="n">goo</span><span class="o">.</span><span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+   <span class="n">goo</span><span class="o">.</span><span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+   <span class="p">)</span>
+<span class="n">cell</span><span class="o">.</span><span class="n">grn</span> <span class="o">=</span> <span class="n">network1</span>
+<span class="n">cell</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">}</span>
+<span class="n">cell</span><span class="o">.</span><span class="n">link_gene_to_property</span><span class="p">(</span><span class="n">gene</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="nb">property</span><span class="o">=</span><span class="s2">&quot;motion_strength&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When put all together, this is the script that models blinking cells:</p>
+<div class="dropdown admonition">
+<p class="admonition-title">Goo script</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">goo</span>
+
+<span class="n">goo</span><span class="o">.</span><span class="n">reset_modules</span><span class="p">()</span>
+<span class="n">goo</span><span class="o">.</span><span class="n">reset_scene</span><span class="p">()</span>
+
+<span class="c1"># Defining genes</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">Gene</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
+
+<span class="n">celltype</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">CellType</span><span class="p">(</span><span class="s2">&quot;cellA&quot;</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="n">target_volume</span><span class="o">=</span><span class="mi">125</span><span class="p">)</span>
+<span class="n">celltype</span><span class="o">.</span><span class="n">homo_adhesion_strength</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">celltype</span><span class="o">.</span><span class="n">motion_strength</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">cell</span> <span class="o">=</span> <span class="n">celltype</span><span class="o">.</span><span class="n">create_cell</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;cell1&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+<span class="n">cell</span><span class="o">.</span><span class="n">stiffness</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="n">network1</span> <span class="o">=</span> <span class="n">goo</span><span class="o">.</span><span class="n">GeneRegulatoryNetwork</span><span class="p">()</span>
+<span class="n">network1</span><span class="o">.</span><span class="n">load_circuits</span><span class="p">(</span>
+    <span class="n">goo</span><span class="o">.</span><span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
+    <span class="n">goo</span><span class="o">.</span><span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
+    <span class="n">goo</span><span class="o">.</span><span class="n">DegFirstOrder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span>
+    <span class="n">goo</span><span class="o">.</span><span class="n">ProdRepression</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+    <span class="n">goo</span><span class="o">.</span><span class="n">ProdRepression</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
+    <span class="n">goo</span><span class="o">.</span><span class="n">ProdRepression</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">kcat</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
     <span class="p">)</span>
 <span class="n">cell</span><span class="o">.</span><span class="n">grn</span> <span class="o">=</span> <span class="n">network1</span>
 <span class="n">cell</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span><span class="n">x</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">z</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">}</span>
@@ -666,9 +574,8 @@ therefore, the speed of the cell oscillates between exploratory (fast motility) 
 <span class="n">sim</span><span class="o">.</span><span class="n">add_handlers</span><span class="p">(</span>
     <span class="p">[</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">GrowthPIDHandler</span><span class="p">(),</span>
-<span class="c1">#        goo.SizeDivisionHandler(goo.BisectDivisionLogic, mu=60, sigma=2),</span>
+        <span class="n">goo</span><span class="o">.</span><span class="n">SizeDivisionHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">BisectDivisionLogic</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">125</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">3</span><span class="p">),</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">RecenterHandler</span><span class="p">(),</span>
-<span class="c1">#        goo.RemeshHandler(),</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">NetworkHandler</span><span class="p">(),</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">ColorizeHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">Colorizer</span><span class="o">.</span><span class="n">GENE</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span>
         <span class="n">goo</span><span class="o">.</span><span class="n">RandomMotionHandler</span><span class="p">(</span><span class="n">goo</span><span class="o">.</span><span class="n">ForceDist</span><span class="o">.</span><span class="n">GAUSSIAN</span><span class="p">)</span>
@@ -678,7 +585,8 @@ therefore, the speed of the cell oscillates between exploratory (fast motility) 
 </div>
 </div>
 <p>Running this script in Blender produces the following simulation:</p>
-<video controls="True" loop="True" preload="auto" width="740"><source src="../_images/5_motion_controlled_by_gene_conc0001-1000.mp4" type="video/mp4"></video></section>
+<video controls="True" loop="True" preload="auto" width="740"><source src="../_images/4_oscillatory_motion_cells0001-0250.mp4" type="video/mp4"></video></section>
+</section>
 </section>
 
         </article>
@@ -744,13 +652,11 @@ therefore, the speed of the cell oscillates between exploratory (fast motility) 
 <li><a class="reference internal" href="#creating-cells">Creating cells</a></li>
 <li><a class="reference internal" href="#setting-up-the-simulator">Setting up the simulator</a></li>
 <li><a class="reference internal" href="#appending-handlers-to-the-simulator">Appending handlers to the simulator</a></li>
+<li><a class="reference internal" href="#cell-division-based-on-volume-growth">2. Cell division based on volume growth</a></li>
+<li><a class="reference internal" href="#random-cell-mixing">3. Random cell mixing</a></li>
+<li><a class="reference internal" href="#grn-controlled-cell-motion">4. GRN-controlled cell motion</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#modeling-growing-cell-doublets-with-differential-adhesion">2. Modeling growing cell doublets with differential adhesion</a></li>
-<li><a class="reference internal" href="#cell-division-based-on-volume-growth">3. Cell division based on volume growth</a></li>
-<li><a class="reference internal" href="#random-cell-mixing">4. Random cell mixing</a></li>
-<li><a class="reference internal" href="#blinking-cells-and-the-repressilator">5. Blinking cells and the repressilator</a></li>
-<li><a class="reference internal" href="#controlling-cell-motility-with-gene-concentration">6. Controlling cell motility with gene concentration</a></li>
 </ul>
 </li>
 </ul>

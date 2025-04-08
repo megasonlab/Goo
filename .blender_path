@@ -1,0 +1,4 @@
+BLENDER_PATH := /Applications/Blender-4.0.app/Contents/MacOS/Blender
+BLENDER_VERSION := 4.0
+PYTHON_VERSION := 3.10
+BLENDER_TAG := 40

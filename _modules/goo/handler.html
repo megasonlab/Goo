@@ -221,7 +221,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../getting_started/hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -262,7 +262,7 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>Source code for goo.handler</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Union</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">override</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 
@@ -271,7 +271,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
-
+<span class="kn">import</span><span class="w"> </span><span class="nn">tifffile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial.distance</span><span class="w"> </span><span class="kn">import</span> <span class="n">cdist</span><span class="p">,</span> <span class="n">pdist</span><span class="p">,</span> <span class="n">squareform</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">laplace</span>
@@ -282,6 +283,19 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">goo.cell</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cell</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">goo.gene</span><span class="w"> </span><span class="kn">import</span> <span class="n">Gene</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">goo.molecule</span><span class="w"> </span><span class="kn">import</span> <span class="n">Molecule</span><span class="p">,</span> <span class="n">DiffusionSystem</span>
+
+
+<div class="viewcode-block" id="save_tiff">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.save_tiff">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_tiff</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save a numpy array as a TIFF file.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        data: The numpy array to save</span>
+<span class="sd">        path: The path where to save the TIFF file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tifffile</span><span class="o">.</span><span class="n">imwrite</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="Handler">
@@ -466,7 +480,6 @@
 <div class="viewcode-block" id="RecenterHandler.run">
 <a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.RecenterHandler.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">depsgraph</span><span class="p">):</span>
-
         <span class="n">cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()</span>
 
         <span class="n">cell_number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span>
@@ -491,17 +504,22 @@
         <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">():</span>
             <span class="n">cell</span><span class="o">.</span><span class="n">recenter</span><span class="p">()</span>
 
-            <span class="n">cell_size</span> <span class="o">=</span> <span class="n">cell</span><span class="o">.</span><span class="n">major_axis</span><span class="p">()</span><span class="o">.</span><span class="n">length</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span>
-            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">adhesion_forces</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="o">.</span><span class="n">enabled</span><span class="p">():</span>
-                    <span class="k">continue</span>
-                <span class="n">force</span><span class="o">.</span><span class="n">min_dist</span> <span class="o">=</span> <span class="n">cell_size</span> <span class="o">-</span> <span class="mf">0.4</span>
-                <span class="n">force</span><span class="o">.</span><span class="n">max_dist</span> <span class="o">=</span> <span class="n">cell_size</span> <span class="o">+</span> <span class="mf">0.4</span>
+            <span class="c1"># Update adhesion forces if they exist</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="s1">&#39;adhesion_forces&#39;</span><span class="p">):</span>
+                <span class="n">cell_size</span> <span class="o">=</span> <span class="n">cell</span><span class="o">.</span><span class="n">major_axis</span><span class="p">()</span><span class="o">.</span><span class="n">length</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span>
+                <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">adhesion_forces</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="o">.</span><span class="n">enabled</span><span class="p">():</span>
+                        <span class="k">continue</span>
+                    <span class="n">force</span><span class="o">.</span><span class="n">min_dist</span> <span class="o">=</span> <span class="n">cell_size</span> <span class="o">-</span> <span class="mf">0.4</span>
+                    <span class="n">force</span><span class="o">.</span><span class="n">max_dist</span> <span class="o">=</span> <span class="n">cell_size</span> <span class="o">+</span> <span class="mf">0.4</span>
 
-            <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">motion_force</span><span class="p">:</span>
+            <span class="c1"># Update motion force if it exists</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="s1">&#39;motion_force&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cell</span><span class="o">.</span><span class="n">motion_force</span><span class="p">:</span>
                 <span class="n">cell</span><span class="o">.</span><span class="n">move</span><span class="p">()</span>
-                
-            <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="o">.</span><span class="n">point_cache</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">=</span> <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">frame_end</span></div>
+            
+            <span class="c1"># Update cloth modifier if it exists</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="s1">&#39;cloth_mod&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="p">,</span> <span class="s1">&#39;point_cache&#39;</span><span class="p">):</span>
+                <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="o">.</span><span class="n">point_cache</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">=</span> <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">frame_end</span></div>
 </div>
 
 
@@ -586,20 +604,45 @@
 <span class="sd">&quot;&quot;&quot;Possible properties by which cells are colored.&quot;&quot;&quot;</span>
 <span class="n">Colorizer</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span><span class="s2">&quot;Colorizer&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;PRESSURE&quot;</span><span class="p">,</span> <span class="s2">&quot;VOLUME&quot;</span><span class="p">,</span> <span class="s2">&quot;RANDOM&quot;</span><span class="p">,</span> <span class="s2">&quot;GENE&quot;</span><span class="p">])</span>
 
+<span class="sd">&quot;&quot;&quot;Color map for the random cell colorizer.&quot;&quot;&quot;</span>
+<span class="n">COLORS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mf">0.902</span><span class="p">,</span> <span class="mf">0.490</span><span class="p">,</span> <span class="mf">0.133</span><span class="p">),</span>  <span class="c1"># Orange</span>
+    <span class="p">(</span><span class="mf">0.466</span><span class="p">,</span> <span class="mf">0.674</span><span class="p">,</span> <span class="mf">0.188</span><span class="p">),</span>  <span class="c1"># Green</span>
+    <span class="p">(</span><span class="mf">0.208</span><span class="p">,</span> <span class="mf">0.592</span><span class="p">,</span> <span class="mf">0.560</span><span class="p">),</span>  <span class="c1"># Teal</span>
+    <span class="p">(</span><span class="mf">0.121</span><span class="p">,</span> <span class="mf">0.466</span><span class="p">,</span> <span class="mf">0.705</span><span class="p">),</span>  <span class="c1"># Blue</span>
+    <span class="p">(</span><span class="mf">0.682</span><span class="p">,</span> <span class="mf">0.780</span><span class="p">,</span> <span class="mf">0.909</span><span class="p">),</span>  <span class="c1"># Light Blue</span>
+    <span class="p">(</span><span class="mf">0.984</span><span class="p">,</span> <span class="mf">0.502</span><span class="p">,</span> <span class="mf">0.447</span><span class="p">),</span>  <span class="c1"># Coral</span>
+    <span class="p">(</span><span class="mf">0.890</span><span class="p">,</span> <span class="mf">0.101</span><span class="p">,</span> <span class="mf">0.109</span><span class="p">),</span>  <span class="c1"># Red</span>
+    <span class="p">(</span><span class="mf">0.792</span><span class="p">,</span> <span class="mf">0.698</span><span class="p">,</span> <span class="mf">0.839</span><span class="p">),</span>  <span class="c1"># Lavender</span>
+    <span class="p">(</span><span class="mf">0.415</span><span class="p">,</span> <span class="mf">0.239</span><span class="p">,</span> <span class="mf">0.603</span><span class="p">),</span>  <span class="c1"># Purple</span>
+    <span class="p">(</span><span class="mf">0.941</span><span class="p">,</span> <span class="mf">0.894</span><span class="p">,</span> <span class="mf">0.259</span><span class="p">),</span>  <span class="c1"># Yellow</span>
+    <span class="p">(</span><span class="mf">0.650</span><span class="p">,</span> <span class="mf">0.337</span><span class="p">,</span> <span class="mf">0.156</span><span class="p">),</span>  <span class="c1"># Brown</span>
+    <span class="p">(</span><span class="mf">0.647</span><span class="p">,</span> <span class="mf">0.647</span><span class="p">,</span> <span class="mf">0.647</span><span class="p">),</span>  <span class="c1"># Grey</span>
+    <span class="p">(</span><span class="mf">0.529</span><span class="p">,</span> <span class="mf">0.807</span><span class="p">,</span> <span class="mf">0.980</span><span class="p">),</span>  <span class="c1"># Sky Blue</span>
+    <span class="p">(</span><span class="mf">0.556</span><span class="p">,</span> <span class="mf">0.929</span><span class="p">,</span> <span class="mf">0.247</span><span class="p">),</span>  <span class="c1"># Light Green</span>
+    <span class="p">(</span><span class="mf">0.749</span><span class="p">,</span> <span class="mf">0.376</span><span class="p">,</span> <span class="mf">0.980</span><span class="p">),</span>  <span class="c1"># Violet</span>
+    <span class="p">(</span><span class="mf">0.980</span><span class="p">,</span> <span class="mf">0.745</span><span class="p">,</span> <span class="mf">0.376</span><span class="p">),</span>  <span class="c1"># Peach</span>
+    <span class="p">(</span><span class="mf">0.415</span><span class="p">,</span> <span class="mf">0.215</span><span class="p">,</span> <span class="mf">0.235</span><span class="p">),</span>  <span class="c1"># Dark Red</span>
+    <span class="p">(</span><span class="mf">0.905</span><span class="p">,</span> <span class="mf">0.725</span><span class="p">,</span> <span class="mf">0.725</span><span class="p">),</span>  <span class="c1"># Soft Pink</span>
+    <span class="p">(</span><span class="mf">0.282</span><span class="p">,</span> <span class="mf">0.820</span><span class="p">,</span> <span class="mf">0.800</span><span class="p">),</span>  <span class="c1"># Aqua</span>
+    <span class="p">(</span><span class="mf">0.137</span><span class="p">,</span> <span class="mf">0.137</span><span class="p">,</span> <span class="mf">0.137</span><span class="p">),</span>  <span class="c1"># Black</span>
+<span class="p">]</span>
+
 
 <div class="viewcode-block" id="ColorizeHandler">
 <a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.ColorizeHandler">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ColorizeHandler</span><span class="p">(</span><span class="n">Handler</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for coloring cells based off of a specified property.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for coloring cells based on a specified property.</span>
 
-<span class="sd">    Cells are colored on a blue-red spectrum, based on the relative value</span>
-<span class="sd">    of the specified property to all other cells. For example, the cell with</span>
-<span class="sd">    the highest pressure is colored red, while the cell with an average</span>
-<span class="sd">    pressure is colored purple.</span>
+<span class="sd">    Cells are colored on a blue-red spectrum based on the relative value</span>
+<span class="sd">    of the specified property to all other cells. In RANDOM mode, cells</span>
+<span class="sd">    cycle through a fixed 20-color palette.</span>
 
 <span class="sd">    Attributes:</span>
-<span class="sd">        colorizer (Colorizer): the property by which cells are colored.</span>
-<span class="sd">        gene (str): optional, the gene off of which cell color is based.</span>
+<span class="sd">        colorizer (Colorizer): The property by which cells are colored.</span>
+<span class="sd">        gene (str): Optional, the gene off of which cell color is based.</span>
+<span class="sd">        range (tuple): Optional, range of values for the colorizer. If provided,</span>
+<span class="sd">            values are scaled relative to this range instead of min-max normalization.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -608,52 +651,105 @@
         <span class="n">gene</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Gene</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="nb">range</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== ColorizeHandler Initialization ===&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span> <span class="o">=</span> <span class="n">colorizer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gene</span> <span class="o">=</span> <span class="n">gene</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="o">=</span> <span class="nb">range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initialized ColorizeHandler with colorizer=</span><span class="si">{</span><span class="n">colorizer</span><span class="si">}</span><span class="s2">, gene=</span><span class="si">{</span><span class="n">gene</span><span class="si">}</span><span class="s2">, range=</span><span class="si">{</span><span class="nb">range</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># Scaled based on min and max</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">values</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">values</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># Truncate numbers into specific range, then scale based on max of range.</span>
-            <span class="nb">min</span><span class="p">,</span> <span class="nb">max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">range</span>
-            <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">max</span><span class="p">)</span>
-            <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">min</span><span class="p">)</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">values</span> <span class="o">-</span> <span class="nb">min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="nb">max</span> <span class="o">-</span> <span class="nb">min</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Scale values using the specified range instead of min-max normalization.&quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Scaling Values ===&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No values to scale&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Input values: </span><span class="si">{</span><span class="n">values</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Use the specified range (0.5, 2.5) instead of min-max</span>
+        <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.5</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using fixed range: min=</span><span class="si">{</span><span class="n">min_val</span><span class="si">}</span><span class="s2">, max=</span><span class="si">{</span><span class="n">max_val</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Clip values to the range</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After clipping: </span><span class="si">{</span><span class="n">values</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Scale to [0, 1] using the fixed range</span>
+        <span class="k">if</span> <span class="n">max_val</span> <span class="o">-</span> <span class="n">min_val</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: max_val - min_val is 0, returning all ones&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            
+        <span class="n">scaled</span> <span class="o">=</span> <span class="p">(</span><span class="n">values</span> <span class="o">-</span> <span class="n">min_val</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_val</span> <span class="o">-</span> <span class="n">min_val</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After scaling: </span><span class="si">{</span><span class="n">scaled</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">scaled</span>
 
 <div class="viewcode-block" id="ColorizeHandler.run">
 <a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.ColorizeHandler.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">depsgraph</span><span class="p">):</span>
-        <span class="k">match</span> <span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span><span class="p">:</span>
-            <span class="k">case</span> <span class="n">Colorizer</span><span class="o">.</span><span class="n">PRESSURE</span><span class="p">:</span>
-                <span class="n">ps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cell</span><span class="o">.</span><span class="n">pressure</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()])</span>
-                <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">(</span><span class="n">ps</span><span class="p">)</span>
-            <span class="k">case</span> <span class="n">Colorizer</span><span class="o">.</span><span class="n">VOLUME</span><span class="p">:</span>
-                <span class="n">vs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cell</span><span class="o">.</span><span class="n">volume</span><span class="p">()</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()])</span>
-                <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">(</span><span class="n">vs</span><span class="p">)</span>
-            <span class="k">case</span> <span class="n">Colorizer</span><span class="o">.</span><span class="n">GENE</span><span class="p">:</span>
-                <span class="n">gs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">cell</span><span class="o">.</span><span class="n">metabolites</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">gene</span><span class="p">]</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()]</span>
-                <span class="p">)</span>
-                <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">(</span><span class="n">gs</span><span class="p">)</span>
-            <span class="k">case</span> <span class="n">Colorizer</span><span class="o">.</span><span class="n">RANDOM</span><span class="p">:</span>
-                <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()))</span>
-            <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;Colorizer must be one of PRESSURE, VOLUME, GENE, or RANDOM.&quot;</span>
-                <span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Applies coloring to cells based on the selected property.&quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== ColorizeHandler Run ===&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frame: </span><span class="si">{</span><span class="n">scene</span><span class="o">.</span><span class="n">frame_current</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="n">cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of cells: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cells</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No cells found!&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+            
+        <span class="n">red</span><span class="p">,</span> <span class="n">blue</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">((</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span> <span class="n">Vector</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
 
-        <span class="n">red</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">((</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
-        <span class="n">blue</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Processing cells with colorizer=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gene</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using gene: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">gene</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">cell</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">(),</span> <span class="n">values</span><span class="p">):</span>
-            <span class="n">color</span> <span class="o">=</span> <span class="n">blue</span><span class="o">.</span><span class="n">lerp</span><span class="p">(</span><span class="n">red</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
-            <span class="n">cell</span><span class="o">.</span><span class="n">recolor</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">color</span><span class="p">))</span></div>
+        <span class="n">property_values</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span> <span class="o">!=</span> <span class="n">Colorizer</span><span class="o">.</span><span class="n">RANDOM</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Collecting property values...&quot;</span><span class="p">)</span>
+            <span class="n">property_values</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">Colorizer</span><span class="o">.</span><span class="n">PRESSURE</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+                    <span class="n">cell</span><span class="o">.</span><span class="n">pressure</span> <span class="k">if</span> <span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span> <span class="ow">and</span> 
+                                    <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="p">,</span> <span class="s1">&#39;settings&#39;</span><span class="p">))</span>
+                    <span class="k">else</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span>
+                <span class="p">]),</span>
+                <span class="n">Colorizer</span><span class="o">.</span><span class="n">VOLUME</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cell</span><span class="o">.</span><span class="n">volume</span><span class="p">()</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">]),</span>
+                <span class="n">Colorizer</span><span class="o">.</span><span class="n">GENE</span><span class="p">:</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cell</span><span class="o">.</span><span class="n">metabolites</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">gene</span><span class="p">]</span> 
+                                         <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">])</span>
+                                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gene</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])),</span>
+            <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">property_values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Raw property values: </span><span class="si">{</span><span class="n">property_values</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span><span class="p">(</span><span class="n">property_values</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final scaled values: </span><span class="si">{</span><span class="n">values</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Invalid colorizer type: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Colorizer must be: PRESSURE, VOLUME, GENE, or RANDOM.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Using random colors&quot;</span><span class="p">)</span>
+            <span class="c1"># Assign colors in a deterministic sequence from the fixed palette</span>
+            <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">just_divided</span> <span class="ow">or</span> <span class="n">cell</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_map</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">color_map</span><span class="p">[</span><span class="n">cell</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">COLORS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">color_counter</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">COLORS</span><span class="p">)]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">color_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">color_map</span><span class="p">[</span><span class="n">cell</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">]</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Applying colors to cells...&quot;</span><span class="p">)</span>
+        <span class="c1"># Apply colors to cells</span>
+        <span class="k">for</span> <span class="n">cell</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cells</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">colorizer</span> <span class="o">==</span> <span class="n">Colorizer</span><span class="o">.</span><span class="n">RANDOM</span><span class="p">:</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">color</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">blue</span><span class="o">.</span><span class="n">lerp</span><span class="p">(</span><span class="n">red</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Cell </span><span class="si">{</span><span class="n">cell</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Value: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Final color: </span><span class="si">{</span><span class="n">color</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">cell</span><span class="o">.</span><span class="n">recolor</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== ColorizeHandler Run Complete ===&quot;</span><span class="p">)</span></div>
 </div>
 
-
+                
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_get_divisions</span><span class="p">(</span><span class="n">cells</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Cell</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate a list of cells that have divided in the past frame.</span>
@@ -1043,6 +1139,337 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensure HDF5 file is closed when object is deleted.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="SliceExporter">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SliceExporter</span><span class="p">(</span><span class="n">Handler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler to save point cloud data of the simulation at each frame and convert to 3D array.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        output_dir: The directory to save the point cloud data.</span>
+<span class="sd">        resolution: The resolution of the grid to save the point cloud data. </span>
+<span class="sd">            Default is (256, 256, 256).</span>
+<span class="sd">        scale: The scale of the grid to save the point cloud data.</span>
+<span class="sd">            Default is (0.2, 0.2, 0.2).</span>
+<span class="sd">        microscope_dt: The time step of the microscope.</span>
+<span class="sd">            Default is 10.</span>
+<span class="sd">        padding: The padding of the grid to save the point cloud data.</span>
+<span class="sd">            Default is 5.0.</span>
+<span class="sd">        downscale: The downscaling factor for the low-resolution version.</span>
+<span class="sd">            Can be a single integer or a tuple of integers for each dimension.</span>
+<span class="sd">            Default is None (no downscaling).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> 
+        <span class="n">resolution</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">),</span>
+        <span class="n">scale</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">),</span>
+        <span class="n">microscope_dt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">padding</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+        <span class="n">downscale</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="n">resolution</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">microscope_dt</span> <span class="o">=</span> <span class="n">microscope_dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="n">padding</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span> <span class="o">=</span> <span class="n">downscale</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SliceExporter.get_scene_bounds">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter.get_scene_bounds">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_scene_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the bounding box of all visible mesh objects in the scene.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: (min_coords, max_coords) representing the bounding box</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">visible_objects</span> <span class="o">=</span> <span class="p">[</span><span class="n">obj</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">objects</span> <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;MESH&#39;</span> 
+                           <span class="ow">and</span> <span class="n">obj</span><span class="o">.</span><span class="n">visible_get</span><span class="p">()]</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">visible_objects</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="c1"># Get world space coordinates of all vertices</span>
+        <span class="n">all_vertices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">visible_objects</span><span class="p">:</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">world_matrix</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">matrix_world</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">vertices</span><span class="p">:</span>
+                <span class="n">world_co</span> <span class="o">=</span> <span class="n">world_matrix</span> <span class="o">@</span> <span class="n">v</span><span class="o">.</span><span class="n">co</span>
+                <span class="n">all_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">world_co</span><span class="p">)</span>
+        
+        <span class="n">vertices_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_vertices</span><span class="p">)</span>
+        <span class="n">min_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">vertices_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">max_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">vertices_array</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        
+        <span class="c1"># Add padding</span>
+        <span class="n">padding_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">min_coords</span> <span class="o">-=</span> <span class="n">padding_array</span>
+        <span class="n">max_coords</span> <span class="o">+=</span> <span class="n">padding_array</span>
+        
+        <span class="k">return</span> <span class="n">min_coords</span><span class="p">,</span> <span class="n">max_coords</span></div>
+
+
+<div class="viewcode-block" id="SliceExporter.world_to_grid_coords">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter.world_to_grid_coords">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">world_to_grid_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">world_coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert world coordinates to grid coordinates.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            world_coords: World space coordinates</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Grid coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">min_coords</span><span class="p">,</span> <span class="n">max_coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_scene_bounds</span><span class="p">()</span>
+        <span class="c1"># Normalize coordinates to [0, 1] range</span>
+        <span class="n">normalized</span> <span class="o">=</span> <span class="p">(</span><span class="n">world_coords</span> <span class="o">-</span> <span class="n">min_coords</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_coords</span> <span class="o">-</span> <span class="n">min_coords</span><span class="p">)</span>
+        <span class="c1"># Scale to grid size</span>
+        <span class="k">return</span> <span class="n">normalized</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SliceExporter.sample_mesh_points">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter.sample_mesh_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample_mesh_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="n">bpy</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">Object</span><span class="p">,</span> <span class="n">num_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200000</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sample points densely and uniformly from a mesh object.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            obj: The mesh object to sample from</span>
+<span class="sd">            num_points: Number of points to sample (increased for better coverage)</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Array of sampled points in world coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the mesh data</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">bm</span> <span class="o">=</span> <span class="n">bmesh</span><span class="o">.</span><span class="n">new</span><span class="p">()</span>
+        <span class="n">bm</span><span class="o">.</span><span class="n">from_mesh</span><span class="p">(</span><span class="n">mesh</span><span class="p">)</span>
+        <span class="n">bm</span><span class="o">.</span><span class="n">faces</span><span class="o">.</span><span class="n">ensure_lookup_table</span><span class="p">()</span>
+        
+        <span class="c1"># Calculate total area for weighted sampling</span>
+        <span class="n">total_area</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">calc_area</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">bm</span><span class="o">.</span><span class="n">faces</span><span class="p">)</span>
+        
+        <span class="c1"># Calculate points per face based on area</span>
+        <span class="n">points_per_face</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">bm</span><span class="o">.</span><span class="n">faces</span><span class="p">:</span>
+            <span class="n">face_area</span> <span class="o">=</span> <span class="n">face</span><span class="o">.</span><span class="n">calc_area</span><span class="p">()</span>
+            <span class="c1"># Ensure at least 10 points per face for small faces</span>
+            <span class="n">num_face_points</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_points</span> <span class="o">*</span> <span class="p">(</span><span class="n">face_area</span> <span class="o">/</span> <span class="n">total_area</span><span class="p">)))</span>
+            <span class="n">points_per_face</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_face_points</span><span class="p">)</span>
+        
+        <span class="c1"># Sample points</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">face</span><span class="p">,</span> <span class="n">num_face_points</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bm</span><span class="o">.</span><span class="n">faces</span><span class="p">,</span> <span class="n">points_per_face</span><span class="p">):</span>
+            <span class="c1"># Get face vertices</span>
+            <span class="n">verts</span> <span class="o">=</span> <span class="n">face</span><span class="o">.</span><span class="n">verts</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">verts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="c1"># For non-triangular faces, use fan triangulation</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">face</span><span class="o">.</span><span class="n">calc_center_median</span><span class="p">())</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">verts</span><span class="p">)):</span>
+                    <span class="n">v1</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">verts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">co</span><span class="p">)</span>
+                    <span class="n">v2</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">verts</span><span class="p">[(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">verts</span><span class="p">)]</span><span class="o">.</span><span class="n">co</span><span class="p">)</span>
+                    <span class="n">v3</span> <span class="o">=</span> <span class="n">center</span>
+                    
+                    <span class="c1"># Sample points in this triangle</span>
+                    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_face_points</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">verts</span><span class="p">)):</span>
+                        <span class="c1"># Generate random barycentric coordinates</span>
+                        <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())</span>
+                        <span class="k">if</span> <span class="n">r1</span> <span class="o">+</span> <span class="n">r2</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">r1</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">r2</span>
+                        
+                        <span class="c1"># Calculate point position</span>
+                        <span class="n">point</span> <span class="o">=</span> <span class="n">v1</span> <span class="o">+</span> <span class="n">v2</span> <span class="o">*</span> <span class="n">r1</span> <span class="o">-</span> <span class="n">v1</span> <span class="o">*</span> <span class="n">r1</span> <span class="o">+</span> <span class="n">v3</span> <span class="o">*</span> <span class="n">r2</span> <span class="o">-</span> <span class="n">v1</span> <span class="o">*</span> <span class="n">r2</span>
+                        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">matrix_world</span> <span class="o">@</span> <span class="n">point</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># For triangular faces</span>
+                <span class="n">v1</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">verts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">co</span><span class="p">)</span>
+                <span class="n">v2</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">verts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">co</span><span class="p">)</span>
+                <span class="n">v3</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">verts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">co</span><span class="p">)</span>
+                
+                <span class="c1"># Sample points in this triangle</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_face_points</span><span class="p">):</span>
+                    <span class="c1"># Generate random barycentric coordinates</span>
+                    <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())</span>
+                    <span class="k">if</span> <span class="n">r1</span> <span class="o">+</span> <span class="n">r2</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">r1</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">r2</span>
+                    
+                    <span class="c1"># Calculate point position</span>
+                    <span class="n">point</span> <span class="o">=</span> <span class="n">v1</span> <span class="o">+</span> <span class="n">v2</span> <span class="o">*</span> <span class="n">r1</span> <span class="o">-</span> <span class="n">v1</span> <span class="o">*</span> <span class="n">r1</span> <span class="o">+</span> <span class="n">v3</span> <span class="o">*</span> <span class="n">r2</span> <span class="o">-</span> <span class="n">v1</span> <span class="o">*</span> <span class="n">r2</span>
+                    <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">matrix_world</span> <span class="o">@</span> <span class="n">point</span><span class="p">)</span>
+        
+        <span class="n">bm</span><span class="o">.</span><span class="n">free</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SliceExporter.points_to_volume">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter.points_to_volume">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">points_to_volume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert point cloud to a 3D volume array with continuous surfaces.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            points: Array of points in world coordinates</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            3D volume array with continuous surfaces</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Convert points to grid coordinates</span>
+        <span class="n">grid_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_to_grid_coords</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        
+        <span class="c1"># Create volume array</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        
+        <span class="c1"># Convert to integer coordinates</span>
+        <span class="n">grid_points</span> <span class="o">=</span> <span class="n">grid_points</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        
+        <span class="c1"># Filter points within bounds</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">((</span><span class="n">grid_points</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">grid_points</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">grid_points</span> <span class="o">=</span> <span class="n">grid_points</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        
+        <span class="c1"># Mark voxels containing points</span>
+        <span class="n">volume</span><span class="p">[</span><span class="n">grid_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">grid_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">grid_points</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        
+        <span class="c1"># Use a single dilation operation to create continuous surfaces</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">binary_dilation</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)))</span>
+        
+        <span class="k">return</span> <span class="n">volume</span></div>
+
+
+<div class="viewcode-block" id="SliceExporter.downsample_volume">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter.downsample_volume">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">downsample_volume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Downsample the volume array and adjust the scale accordingly.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            volume: The original volume array</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: (downsampled_volume, new_scale)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">volume</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
+            
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downscale</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">downscale</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downscale</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">downscale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span>
+            
+        <span class="c1"># Calculate new scale</span>
+        <span class="n">new_scale</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">d</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span> <span class="n">downscale</span><span class="p">))</span>
+        
+        <span class="c1"># Downsample using sum operation (preserves binary nature)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">ndimage</span>
+        <span class="n">downsampled</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">volume</span><span class="p">,</span> 
+                                 <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">downscale</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="o">/</span><span class="n">downscale</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="o">/</span><span class="n">downscale</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> 
+                                 <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># order=0 for nearest neighbor</span>
+        
+        <span class="k">return</span> <span class="n">downsampled</span><span class="p">,</span> <span class="n">new_scale</span></div>
+
+
+<div class="viewcode-block" id="SliceExporter.run">
+<a class="viewcode-back" href="../../user_guide/goo.handler.html#goo.handler.SliceExporter.run">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scene</span><span class="p">:</span> <span class="n">bpy</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">Scene</span><span class="p">,</span> <span class="n">depsgraph</span><span class="p">:</span> <span class="n">bpy</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">Depsgraph</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the point cloud export process for each frame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            scene: The Blender scene.</span>
+<span class="sd">            depsgraph: The dependency graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># export every microscope_dt</span>
+        <span class="k">if</span> <span class="n">scene</span><span class="o">.</span><span class="n">frame_current</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">microscope_dt</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Determine the time step index based on the current frame</span>
+        <span class="n">time_step</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">frame_current</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">microscope_dt</span>
+
+        <span class="c1"># Create a folder for this time step</span>
+        <span class="n">time_step_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;T</span><span class="si">{</span><span class="n">time_step</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">time_step_dir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">time_step_dir</span><span class="p">)</span>
+
+        <span class="c1"># Get all visible mesh objects</span>
+        <span class="n">visible_objects</span> <span class="o">=</span> <span class="p">[</span><span class="n">obj</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">objects</span> <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;MESH&#39;</span> 
+                           <span class="ow">and</span> <span class="n">obj</span><span class="o">.</span><span class="n">visible_get</span><span class="p">()]</span>
+        
+        <span class="c1"># Sample points from all meshes</span>
+        <span class="n">all_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">visible_objects</span><span class="p">:</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_mesh_points</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">all_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        
+        <span class="c1"># Combine all points</span>
+        <span class="n">combined_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">all_points</span><span class="p">)</span>
+        
+        <span class="c1"># Convert to volume</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">points_to_volume</span><span class="p">(</span><span class="n">combined_points</span><span class="p">)</span>
+        
+        <span class="c1"># Create coordinate arrays based on scale</span>
+        <span class="n">z_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">y_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        
+        <span class="c1"># Create dataset</span>
+        <span class="n">ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+            <span class="n">data_vars</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;volume&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">volume</span><span class="p">)</span>
+            <span class="p">},</span>
+            <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;z&#39;</span><span class="p">:</span> <span class="n">z_coords</span><span class="p">,</span>
+                <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">y_coords</span><span class="p">,</span>
+                <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">x_coords</span>
+            <span class="p">},</span>
+            <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;3D volume representation of point cloud data&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;microns&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;frame&#39;</span><span class="p">:</span> <span class="n">scene</span><span class="o">.</span><span class="n">frame_current</span><span class="p">,</span>
+                <span class="s1">&#39;num_points&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">combined_points</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Save full resolution to NetCDF</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">time_step_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;point_cloud_volume.nc&quot;</span><span class="p">)</span>
+        <span class="n">ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+        
+        <span class="c1"># Save downsampled version if requested</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">downsampled_volume</span><span class="p">,</span> <span class="n">new_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsample_volume</span><span class="p">(</span><span class="n">volume</span><span class="p">)</span>
+            
+            <span class="c1"># Create coordinate arrays for downsampled version</span>
+            <span class="n">z_coords_ds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">downsampled_volume</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">new_scale</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">y_coords_ds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">downsampled_volume</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">new_scale</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">x_coords_ds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">downsampled_volume</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">new_scale</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            
+            <span class="c1"># Create dataset for downsampled version</span>
+            <span class="n">ds_ds</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">Dataset</span><span class="p">(</span>
+                <span class="n">data_vars</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s1">&#39;volume&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">],</span> <span class="n">downsampled_volume</span><span class="p">)</span>
+                <span class="p">},</span>
+                <span class="n">coords</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s1">&#39;z&#39;</span><span class="p">:</span> <span class="n">z_coords_ds</span><span class="p">,</span>
+                    <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="n">y_coords_ds</span><span class="p">,</span>
+                    <span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="n">x_coords_ds</span>
+                <span class="p">},</span>
+                <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;Downsampled 3D volume representation of point cloud data&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="s1">&#39;microns&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;frame&#39;</span><span class="p">:</span> <span class="n">scene</span><span class="o">.</span><span class="n">frame_current</span><span class="p">,</span>
+                    <span class="s1">&#39;num_points&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">combined_points</span><span class="p">),</span>
+                    <span class="s1">&#39;downscale_factor&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">downscale</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+            
+            <span class="c1"># Save downsampled version to NetCDF</span>
+            <span class="n">output_path_ds</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">time_step_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;point_cloud_volume_downsampled.nc&quot;</span><span class="p">)</span>
+            <span class="n">ds_ds</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">output_path_ds</span><span class="p">)</span>
+            
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved point cloud volumes for frame </span><span class="si">{</span><span class="n">scene</span><span class="o">.</span><span class="n">frame_current</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</div>
 
 </pre></div>
         </article>

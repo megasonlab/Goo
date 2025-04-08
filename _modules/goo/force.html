@@ -221,7 +221,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../getting_started/hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -519,6 +519,7 @@
             <span class="p">)</span>
         <span class="n">obj</span> <span class="o">=</span> <span class="n">bpy</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">obj</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">loc</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">hide_set</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">adhesion_force</span> <span class="o">=</span> <span class="n">AdhesionForce</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
 
     <span class="n">adhesion_force</span><span class="o">.</span><span class="n">strength</span> <span class="o">=</span> <span class="n">strength</span>
@@ -544,8 +545,9 @@
     <span class="n">obj</span><span class="o">.</span><span class="n">location</span> <span class="o">=</span> <span class="n">loc</span>
     <span class="n">force</span> <span class="o">=</span> <span class="n">MotionForce</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
     <span class="n">force</span><span class="o">.</span><span class="n">init_strength</span> <span class="o">=</span> <span class="n">strength</span>
-
     <span class="n">force</span><span class="o">.</span><span class="n">strength</span> <span class="o">=</span> <span class="n">strength</span>
+    <span class="c1"># obj.hide_render = True</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">hide_viewport</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="k">return</span> <span class="n">force</span></div>
 
 

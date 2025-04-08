@@ -221,7 +221,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../getting_started/hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -264,10 +264,13 @@
           <h1>Source code for goo.simulator</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">bpy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">Flag</span><span class="p">,</span> <span class="n">auto</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">goo.handler</span><span class="w"> </span><span class="kn">import</span> <span class="n">Handler</span><span class="p">,</span> <span class="n">StopHandler</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">goo.cell</span><span class="w"> </span><span class="kn">import</span> <span class="n">Cell</span><span class="p">,</span> <span class="n">CellType</span>
@@ -303,7 +306,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">diffsystem</span> <span class="o">=</span> <span class="n">diffsystems</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">diffsystems</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">physics_dt</span> <span class="o">=</span> <span class="n">physics_dt</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">molecular_dt</span> <span class="o">=</span> <span class="n">molecular_dt</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addons</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;add_mesh_extra_objects&quot;</span><span class="p">]</span>
+        <span class="c1"># In Blender 4.5, some addons might be renamed or not available</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addons</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># Removing add_mesh_extra_objects as it&#39;s causing issues in 4.5</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">render_format</span><span class="p">:</span> <span class="n">Render</span> <span class="o">=</span> <span class="n">Render</span><span class="o">.</span><span class="n">PNG</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">time</span>
 
@@ -334,7 +338,12 @@
         <span class="c1"># Set up simulation time interval</span>
         <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">frame_start</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span>
-
+        
+        <span class="c1"># Configure Blender&#39;s logging to filter dependency messages</span>
+        <span class="n">bpy</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">debug_depsgraph</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">bpy</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">debug_wm</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">bpy</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span>
+        
         <span class="c1"># Set units to the metric system</span>
         <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">unit_settings</span><span class="o">.</span><span class="n">system</span> <span class="o">=</span> <span class="s2">&quot;METRIC&quot;</span>
         <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">scene</span><span class="o">.</span><span class="n">unit_settings</span><span class="o">.</span><span class="n">scale_length</span> <span class="o">=</span> <span class="mf">1e-6</span>
@@ -387,11 +396,16 @@
 <a class="viewcode-back" href="../../user_guide/goo.simulator.html#goo.simulator.Simulator.enable_addon">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">enable_addon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">addon</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Enable an addon in Blender.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">addon</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">preferences</span><span class="o">.</span><span class="n">addons</span><span class="p">:</span>
-            <span class="n">bpy</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">preferences</span><span class="o">.</span><span class="n">addon_enable</span><span class="p">(</span><span class="n">module</span><span class="o">=</span><span class="n">addon</span><span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Addon &#39;</span><span class="si">{</span><span class="n">addon</span><span class="si">}</span><span class="s2">&#39; has been enabled.&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Addon &#39;</span><span class="si">{</span><span class="n">addon</span><span class="si">}</span><span class="s2">&#39; is already enabled.&quot;</span><span class="p">)</span></div>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">addon</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bpy</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">preferences</span><span class="o">.</span><span class="n">addons</span><span class="p">:</span>
+                <span class="n">bpy</span><span class="o">.</span><span class="n">ops</span><span class="o">.</span><span class="n">preferences</span><span class="o">.</span><span class="n">addon_enable</span><span class="p">(</span><span class="n">module</span><span class="o">=</span><span class="n">addon</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Addon &#39;</span><span class="si">{</span><span class="n">addon</span><span class="si">}</span><span class="s2">&#39; has been enabled.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Addon &#39;</span><span class="si">{</span><span class="n">addon</span><span class="si">}</span><span class="s2">&#39; is already enabled.&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not enable addon &#39;</span><span class="si">{</span><span class="n">addon</span><span class="si">}</span><span class="s2">&#39;. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="c1"># Continue execution even if addon fails to load</span>
+            <span class="k">pass</span></div>
 
 
 <div class="viewcode-block" id="Simulator.toggle_gravity">
@@ -439,8 +453,9 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Extend the scene to allow cloth physics to pass the default 250 frames.&quot;&quot;&quot;</span>
         <span class="n">cells</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cells</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">cells</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span> <span class="ow">and</span> <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="o">.</span><span class="n">point_cache</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">:</span>
-                <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="o">.</span><span class="n">point_cache</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span></div>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="s1">&#39;cloth_mod&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="p">,</span> <span class="s1">&#39;point_cache&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="o">.</span><span class="n">point_cache</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">:</span>
+                    <span class="n">cell</span><span class="o">.</span><span class="n">cloth_mod</span><span class="o">.</span><span class="n">point_cache</span><span class="o">.</span><span class="n">frame_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time</span></div>
 
 
 <div class="viewcode-block" id="Simulator.add_handler">

@@ -1,111 +1,120 @@
-Developer's guide
-====================
+Developer's Guide
+==================
 
-We recommend using Visual Studio Code (VSCode) as code editor. 
+Development Environment
+--------------------------
 
-Contributing to the codebase
--------------------------------
+We recommend using either Visual Studio Code (VS Code) or Cursor as your primary IDE. The project uses a ``Makefile`` to manage the development environment and provides a robust setup for working with Blender's Python ecosystem.
 
-1. Fork the `github repository <https://github.com/smegason/Goo>`__. 
+Development Setup
+~~~~~~~~~~~~~~~~~~
 
-2. Clone your fork repository within VSCode. 
+1. **Fork and Clone**
 
-3. Install dependencies: follow the steps of the `installation guide <https://smegason.github.io/Goo/getting_started/installation.html>`__. 
+   Start by forking and cloning the `Goo repository <https://github.com/megasonlab/Goo>`__.
 
-4. Install the `Blender developer's extension <https://marketplace.visualstudio.com/items?itemName=JacquesLucke.blender-development>`__ developed by Jacques Lucke inside VSCode. 
+2. **Install Development Dependencies**
 
-Installing new packages
------------------------
+   Run the setup command:
 
-1. Activate the virtual environment created during installation and install desired packages:
+   .. code-block:: bash
 
-.. code-block:: bash
+       make setup
 
-    .blender_env\\Scripts\\activate
-    pip install <package>
+   The setup process will:
 
-2. Update the `hook/modules` folder:
+   - Prompt for your Blender executable path
+   - Create a virtual environment with the correct Python version
+   - Install all required dependencies
+   - Set up Blender hooks for development
 
-macOS:
+   **Blender Executable Location:**
+   
+   - macOS: ``/Applications/Blender-x.x.app/Contents/MacOS/Blender``
+   - Windows: ``C:\Program Files\Blender Foundation\Blender x.x\blender.exe``
 
-.. code-block:: bash
+   The path is saved in ``.blender_path`` for future use. Subsequent ``make setup`` runs will offer to reuse this configuration.
 
-    make update_modules
+3. **Configure Your IDE**
 
-Windows:
+   For VS Code users, we recommend installing:
+   
+   - Python extension
+   - Ruff extension for linting and formatting
+   
+   The project includes pre-configured settings in ``pyproject.toml`` for:
+   
+   - Code formatting (88 character line length)
+   - Import sorting
+   - Linting rules optimized for Blender development
 
-.. code-block:: bash
+Development Workflow
+---------------------
 
-    rmdir /S /Q hook
-    mkdir hook\\scripts\\modules
-    xcopy .blender_venv\\lib\\python3.10\\site-packages\\* hook\\scripts\\modules /E /H /I
+Testing
+~~~~~~~~~
 
-
-Testing your code
---------------------
-
-We developed a suite of tests to ensure the correct functioning of the codebase. They do not cover all possible cases, but they are a good starting point. Also, they do not test the realism and accuracy of the physics simulations. 
-
-1. We use pytest from within Blender's Python interpreter to run tests. Make sure to install the `pytest` library in your Blender Python environment.
-
-2. A suite of test cases can be found inside the `/tests` folder.
-
-3. To run the suite of tests, open a terminal in VSCode and run the following command from the codebase root directory. Make sure to replace the path to the Blender executable with the correct path on your system.
-    
-macOS: 
+Run the test suite with:
 
 .. code-block:: bash
 
     make test
 
-
-or
-
-.. code-block:: bash
-
-    /Applications/Blender-4.0.app/Contents/MacOS/Blender --background  --python-expr "import pytest; pytest.main(['-v', './tests'])"
-
-Windows: 
+To run a specific test file:
 
 .. code-block:: bash
 
-    "C:\Program Files\Blender Foundation\Blender 4.0\blender.exe" --background  --python-expr "import pytest; pytest.main(['-v', './tests'])"
+    make test t=tests/path/to/test.py
 
-4. All tests should pass before submitting a pull request.
+The test suite:
 
-5. If you are adding new features, please add tests to cover the new functionality. See the existing test cases for examples.
+- Runs in Blender's Python environment
+- Uses pytest for testing
+- Includes unit tests for core functionality
+- Excludes physics simulation accuracy tests
 
+Code Quality
+~~~~~~~~~~~~~
 
-Update the documentation
------------------------------
+The project uses Ruff for code quality enforcement. The configuration in ``pyproject.toml`` follows:
 
-1. Install dependencies about outlined above
+- Google-style docstrings
+- PEP 8 style guide with specific adaptations for Blender
+- Automatic import sorting
+- Type checking support
 
-2. In your local Goo codebase
+Documentation
+~~~~~~~~~~~~~~~
+
+Documentation uses Sphinx and follows Google-style docstrings. To build the docs:
 
 .. code-block:: bash
 
     cd docs
+    make clean
+    make html
 
-3. Modify source files: make modifications to the source .rst files or to the codebase. Code documentation follows `sphynx <https://www.sphinx-doc.org/en/master/>`__ syntax. 
+**Note for non-macOS users:** Modify the ``SPHINXBUILD`` variable in ``docs/Makefile`` to point to your Blender executable.
 
-4. Running the build
-Due to some dependencies from Blender (i.e. `bpy`), the build has to be ran from Blender using its Python interpreter. The docs directory contains a modified `Makefile` so that it manually uses Blender executable. It should be ready-to-use for MacOS users. Other platform users should modify the 'SPHINXBUILD' variable so that it points towards a Blender executable file path in `Makefile`. 
+Publishing documentation:
 
-.. literalinclude:: ../../Makefile
-   :language: make
+1. Build the documentation as shown above
+2. Copy contents from ``docs/build/html`` to a temporary directory
+3. Switch to the ``gh-pages`` branch
+4. Copy the contents from the temporary directory to the root
+5. Commit and create a pull request
 
-Then, running the build will update the documentation in the `/build` directory. It will also automatically update the library documentation using Sphynx's `automodule`.
+Useful Commands
+----------------
+
+- ``make info``: Display current configuration
+- ``make clean``: Clean build artifacts and hook directories
+- ``make update_modules``: Update Blender hook modules
+- ``make setup``: Initial setup or reconfiguration
+- ``make test``: Run test suite
+
+For a complete list of available commands, run:
 
 .. code-block:: bash
 
-    make clean # clean up the build directory
-    make html # populate the build directory 
-
-5. Move the content of the `docs/build/html`` directory to the root of the `gh-pages` branch using a `tmp/` folder on your local machine. Then push the changes to the remote repository with: 
-    
-.. code-block:: bash
-
-    git add .
-    git commit -m "Update docs"
-    git push -f
+    make help
