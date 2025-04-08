@@ -1,0 +1,195 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[project]
+name = "goo"
+dynamic = ["version"]
+description = "Goo is a library to simulate 3D biological cells, tissues and embryos in Blender."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+authors = [
+    { name = "Antoine A. Ruzette" },
+    { name = "Sean Megason", email = "sean_megason@hms.harvard.edu" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+# Core dependencies that are common to all Blender versions
+dependencies = [
+    "typing_extensions>=4.12.2",
+    "h5py>=3.12.1",
+    "tifffile>=2025.3.13",
+    "xarray>=2025.3.0",
+    "antimony>=2.14.0",
+    "libroadrunner==2.7.0",
+]
+
+[project.optional-dependencies]
+# Blender 4.0 specific dependencies (Python 3.10)
+blender40 = [
+    "numpy==1.26.4",  # Last version supporting Python 3.10
+    "scipy==1.14.0",  # Last version supporting Python 3.10
+    "fake-bpy-module==20240524"
+]
+
+# Blender 4.5 specific dependencies (Python 3.11)
+blender45 = [
+    "numpy>=1.26.4",  # Latest version for Python 3.11
+    "scipy>=1.14.0",  # Latest version for Python 3.11
+    "fake-bpy-module==20240524"
+]
+
+# Development tools
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov>=6.0.0",
+    "Sphinx==7.3.7",
+    "sphinx_copybutton==0.5.2",
+    "furo==2024.8.6",
+    "sphinxcontrib.video==0.3.1",
+    "mypy",
+    "ruff",
+    "pre-commit",
+    "hatch",
+    "uv",
+]
+
+# Documentation tools
+docs = [
+    "Sphinx==7.3.7",
+    "sphinx_copybutton==0.5.2",
+    "furo==2024.8.6",
+    "sphinxcontrib.video==0.3.1"
+]
+
+[project.urls]
+homepage = "https://megasonlab.github.io/Goo/"
+repository = "https://github.com/megasonlab/Goo"
+documentation = "https://megasonlab.github.io/Goo/"
+
+[tool.uv.sources]
+goo = { workspace = true }
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+# Same as Black.
+line-length = 88
+
+# Enable Pyflakes `F` codes by default.
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific rules
+]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Assume Python 3.10
+target-version = "py310"
+
+[tool.ruff.lint]
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+ignore = [
+    "E402",  # module level import not at top of file (common in Blender scripts)
+    "E501",  # line too long (handled by line-length)
+    "W503",  # line break before binary operator (PEP 8 style)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # Allow longer lines in test files
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.isort]
+known-first-party = ["goo"]
+combine-as-imports = true
+force-single-line = false
+force-wrap-aliases = true
+lines-after-imports = 2
+lines-between-types = 1
+order-by-type = true
+split-on-trailing-comma = true
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+files = "src/**/"
+strict = true
+show_error_codes = true
+pretty = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore:unclosed transport:ResourceWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "raise NotImplementedError",
+    "pass",
+]

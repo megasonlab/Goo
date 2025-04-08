@@ -32,7 +32,7 @@ def setup_blender():
     sim.add_handlers(
         [
             GrowthPIDHandler(),
-            RandomMotionHandler(ForceDist.UNIFORM, max_strength=10000),
+            RandomMotionHandler(ForceDist.UNIFORM, strength=10000),
             RecenterHandler(),
         ]
     )

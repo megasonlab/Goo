@@ -70,14 +70,19 @@ def test_remesher_resolution(setup_blender):
 def test_remesher_frequency(setup_blender):
     low_res_cell, high_res_cell = setup_blender
 
+    for i in range(5):
+        bpy.context.scene.frame_set(bpy.context.scene.frame_current + 1)
+
     high_res_vert_count_t0 = len(Cell.vertices(high_res_cell))
     bpy.context.scene.frame_set(bpy.context.scene.frame_current + 1)
     high_res_vert_count_t1 = len(Cell.vertices(high_res_cell))
 
-    low_res_vert_count_t0 = len(Cell.vertices(low_res_cell))
     for i in range(5):
         bpy.context.scene.frame_set(bpy.context.scene.frame_current + 1)
+
+    low_res_vert_count_t0 = len(Cell.vertices(low_res_cell))
     low_res_vert_count_t1 = len(Cell.vertices(low_res_cell))
 
     assert high_res_vert_count_t0 == high_res_vert_count_t1
-    assert low_res_vert_count_t0 != low_res_vert_count_t1
+    assert low_res_vert_count_t0 == low_res_vert_count_t1
+    assert low_res_vert_count_t0 != high_res_vert_count_t1
