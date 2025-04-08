@@ -1,40 +1,135 @@
 .. _installation:
 
 Installation
-============
+=============
 
-1. Install Blender
+Prerequisites
+-------------
 
-Goo runs within Blender, so you will first need to download Blender 4.0 from `here <https://www.blender.org/download/lts/4-0/>`__.
-Goo currently support Blender 3.3 to 4.0. We aim to maintain Goo for future Blender LTS versions but might have a slight lag from their releases. 
+Blender Installation
+~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
+Goo runs in Blender. Currently supported versions:
 
-   Goo is not currently not compatible with Blender 4.1 because of a dependency clash with the `RoadRunner Simulation Engine <https://libroadrunner.readthedocs.io/en/latest/index.html>`__. Use Blender 4.0 while we are working towards implementing biocircuitery in Goo. 
+- **Recommended:** Blender 4.0 LTS (`Download <https://www.blender.org/download/lts/4-0/>`__)
+- **Supported:** Blender 3.3 through 4.0
 
+.. warning::
 
-2. Clone the Goo library from `GitHub <https://github.com/smegason/Goo>`__. Download the zip file of the latest release, and unzip it in an empty folder. \n Alternatively, it can be downloaded from the command line as follows:
+   Blender 4.5 is currently not supported due to compatibility issues with the `RoadRunner Simulation Engine <https://libroadrunner.readthedocs.io/en/latest/index.html>`__. We are actively working on resolving this limitation.
+
+System Requirements
+~~~~~~~~~~~~~~~~~~~
+
+- Python 3.10 or newer
+- Operating System:
+    - Windows 10/11
+    - macOS 10.15 or newer
+    - Linux (major distributions)
+
+Installing Goo
+---------------
+
+1. **Clone Repository**
+
+   Clone the Goo repository from GitHub:
 
    .. code-block:: bash
 
-      mkdir Goo
-      cd Goo
-      wget <Goo-latest-release>.tar.gz
-      tar -xvf <Goo-latest-release>.tar.gz
+       git clone https://github.com/megasonlab/Goo.git
+       cd Goo
 
-2. In Blender, go to `Edit > Preferences > File Paths > Scripts` and add `<your_root_path>/Goo/scripts`.
+2. **Run Setup**
+
+   Execute the setup command:
+
+   .. code-block:: bash
+
+       make setup
+
+   The setup will prompt for your Blender executable location:
+
+   - **macOS:** ``/Applications/Blender-x.x.app/Contents/MacOS/Blender``
+   - **Windows:** ``C:\\Program Files\\Blender Foundation\\Blender x.x\\blender.exe``
+   - **Linux:** Typically ``/usr/bin/blender`` or the installation path
+
+   Your Blender path is saved in ``.blender_path`` for future use.
+
+How Setup Works
+~~~~~~~~~~~~~~~~~
+
+The setup process:
+
+1. Creates a dedicated hook directory for Goo and its dependencies
+2. Sets up an isolated Python environment
+3. Installs all required packages
+4. Configures Blender to recognize the Goo installation
+
+This approach ensures:
+
+- Clean separation from system Python
+- Version-specific compatibility
+- Easy updates and maintenance
+- No conflicts with Blender's internal Python
 
 Dependencies
 ------------
 
-- python 3.7 or newer
-- bpy_ (bundled with Blender)
-- numpy_
-- scipy_
-- antimony_
-- libroadrunner_
-- h5py_
+Core Dependencies
+~~~~~~~~~~~~~~~~~
 
+- **bpy** (Blender Python API)
+    - Bundled with Blender
+    - Provides 3D manipulation capabilities
+
+Scientific Computing
+~~~~~~~~~~~~~~~~~~~~~~
+
+- **numpy** - Numerical computations
+- **scipy** - Scientific algorithms
+- **xarray** - N-D labeled arrays
+
+Simulation Engines
+~~~~~~~~~~~~~~~~~~~~
+
+- **antimony** - Biological modeling language
+- **libroadrunner** - SBML simulation engine
+
+Data Handling
+~~~~~~~~~~~~~~
+
+- **h5py** - HDF5 file format support
+- **tifffile** - TIFF file handling
+
+All dependencies are automatically managed through our setup process. Manual installation is not recommended as it may lead to version conflicts or compatibility issues.
+
+Verification
+-------------
+
+To verify your installation:
+
+.. code-block:: bash
+
+    make test
+
+This will run the test suite to ensure all components are correctly installed and functioning.
+
+For detailed information about your setup:
+
+.. code-block:: bash
+
+    make info
+
+Next Steps
+----------
+
+After installation, we recommend:
+
+1. Reviewing the :doc:`../user_guide/api` for API documentation
+2. Exploring the Goo modules:
+   - :doc:`../user_guide/goo.cell` for cell manipulation
+   - :doc:`../user_guide/goo.force` for force calculations
+   - :doc:`../user_guide/goo.growth` for growth models
 
 .. _bpy: https://docs.blender.org/api/current/info_advanced_blender_as_bpy.html
 .. _numpy: http://www.numpy.org/
@@ -42,72 +137,33 @@ Dependencies
 .. _antimony: https://tellurium.readthedocs.io/en/latest/antimony.html
 .. _libroadrunner: https://www.libroadrunner.org/
 .. _h5py: https://www.h5py.org/
+.. _xarray: https://xarray.dev/
 
-Install dependencies in Blender
-------------------------------------
+.. note::
 
-Blender comes with its own Python interpreter, which is isolated from the system's Python environment. 
-Goo requires some additional packages that must installed and then be exposed to Blender.
+   It is possible to install the dependencies direclty in the Blender Python interpreter. However, we do not recommend this approach as it might lead to conflicts with the system Python interpreter and is harder to manage across different versions of Blender.
 
-MacOS/Linux
-^^^^^^^^^^^
+Documentation
+~~~~~~~~~~~~~~~
 
-For MacOS and Linux, Goo comes packaged with a Makefile to streamline dependency installation. To use it:
+Documentation uses Sphinx and follows Google-style docstrings. To build the docs:
 
-1. Set the Makefile variables `BLENDER_PATH` and `BPY_PATH` to the paths of the Blender executable and its Python interpreter, respectively.
+.. code-block:: bash
 
-   For macOS, it is usually in the Applications folder, e.g.: 
+    make docs
 
-   .. code-block:: bash
+This will:
 
-      BLENDER_PATH = /Applications/Blender.app/Contents/MacOS/Blender
-      BPY_PATH = /Applications/Blender.app/Contents/Resources/4.0/python/bin/python3.10
+1. Use Blender's Python interpreter to ensure compatibility
+2. Build HTML documentation in ``docs/build/html``
+3. Include all necessary dependencies from your setup
 
-2. Set up the Blender environment:
+The documentation will be available at ``docs/build/html/index.html``.
 
-   .. code-block:: bash
+Publishing documentation:
 
-      make setup
-   
-3. Allow Blender to access the dependency folder:
-
-   In Blender, go to `Edit > Preferences > File Paths > Scripts` and add `<your_root_path>/Goo/hook/scripts`.
-
-Windows
-^^^^^^^
-
-For Windows, the setup must be done manually.
-
-1. Find the paths of the Blender executable and its Python interpreter.
-
-   These are usually found in Program Files, e.g., `C:\\Program Files\\Blender Foundation\\Blender 4.0\\Blender.exe` and `C:\\Program Files\\Blender Foundation\\Blender 4.0\\4.0\\python\\bin\\python.exe`.
-
-2. Create a new virtual environment using Blender's Python interpreter:
-
-   .. code-block:: bash
-
-      C:\\Program Files\\Blender Foundation\\Blender 4.0\\4.0\\python\\bin\\python.exe -m venv .blender_env
-
-
-3. Install dependencies into the virtual environment
-
-   .. code-block:: bash
-
-      .blender_env\\bin\\python.exe -m pip install -r requirements.txt
-
-4. Check that the dependencies are installed:
-
-   .. code-block:: bash
-
-      .blender_env\\bin\\python.exe -m pip list
-
-5. Create a "hook" folder that enables the installed packages to be exposed to Blender.
-
-   .. code-block:: bash
-
-      mkdir hook\\scripts\\modules
-      xcopy .blender_venv\\lib\\python3.10\\site-packages\\* hook\\scripts\\modules /E /H /I
-
-6. Allow Blender to access the dependency folder:
-
-   In Blender, go to `Edit > Preferences > File Paths > Scripts` and add `<your_root_path>/Goo/hook/scripts`.
+1. Build the documentation as shown above
+2. Copy contents from ``docs/build/html`` to a temporary directory
+3. Switch to the ``gh-pages`` branch
+4. Copy the contents from the temporary directory to the root
+5. Commit and create a pull request

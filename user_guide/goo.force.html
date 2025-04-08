@@ -222,7 +222,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started/hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -285,12 +285,12 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="goo.force.Boundary">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">Boundary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bpy.types.Object</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#Boundary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.Boundary" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">Boundary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Object</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#Boundary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.Boundary" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="goo.utils.html#goo.utils.BlenderObject" title="goo.utils.BlenderObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">BlenderObject</span></code></a></p>
 <p>A boundary for cells.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>obj</strong> (<em>bpy.types.Object</em>)</p>
+<dd class="field-odd"><p><strong>obj</strong> (<em>Object</em>)</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -303,14 +303,14 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="goo.force.Force">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">Force</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bpy.types.Object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'FORCE'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#Force"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.Force" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">Force</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'FORCE'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#Force"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.Force" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="goo.utils.html#goo.utils.BlenderObject" title="goo.utils.BlenderObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">BlenderObject</span></code></a></p>
 <p>A force.</p>
 <p>Forces are represented in Blender by force field objects. They interact
 with cells to influence their motion.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>obj</strong> (<em>bpy.types.Object</em>) – Blender object to be used as a representation for the force.</p>
+<dd class="field-odd"><p><strong>obj</strong> (<em>Object</em>) – Blender object to be used as a representation for the force.</p>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>type</strong> (<em>str</em>) – Type of force.</p>
@@ -453,24 +453,24 @@ with cells to influence their motion.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="goo.force.MotionForce">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">MotionForce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bpy.types.Object</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#MotionForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.MotionForce" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">MotionForce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Object</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#MotionForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.MotionForce" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#goo.force.Force" title="goo.force.Force"><code class="xref py py-class docutils literal notranslate"><span class="pre">Force</span></code></a></p>
 <p>A motion force.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>obj</strong> (<em>bpy.types.Object</em>)</p>
+<dd class="field-odd"><p><strong>obj</strong> (<em>Object</em>)</p>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="goo.force.MotionForce.point_towards">
-<span class="sig-name descname"><span class="pre">point_towards</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">mathutils.Vector</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#MotionForce.point_towards"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.MotionForce.point_towards" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">point_towards</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Vector</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/force.html#MotionForce.point_towards"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.MotionForce.point_towards" title="Link to this definition">¶</a></dt>
 <dd><p>Set location of a motion force, towards which a cell will move.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>new_loc</strong> – Location of the motion force.</p></li>
 <li><p><strong>target_loc</strong> – Location of the cell upon which the motion acts.</p></li>
-<li><p><strong>loc</strong> (<em>mathutils.Vector</em>)</p></li>
+<li><p><strong>loc</strong> (<em>Vector</em>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -486,7 +486,7 @@ with cells to influence their motion.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="goo.force.create_adhesion">
-<span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">create_adhesion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">strength</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bpy.types.Object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'POINT'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#goo.force.AdhesionForce" title="goo.force.AdhesionForce"><span class="pre">AdhesionForce</span></a></span></span><a class="reference internal" href="../_modules/goo/force.html#create_adhesion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.create_adhesion" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">goo.force.</span></span><span class="sig-name descname"><span class="pre">create_adhesion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">strength</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Object</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'POINT'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#goo.force.AdhesionForce" title="goo.force.AdhesionForce"><span class="pre">AdhesionForce</span></a></span></span><a class="reference internal" href="../_modules/goo/force.html#create_adhesion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.force.create_adhesion" title="Link to this definition">¶</a></dt>
 <dd><p>Creates a new adhesion force.</p>
 <p>Adhesion forces can either be created from cells, in which they are
 homotypic forces, Or they can be created de novo, in which they are
@@ -496,7 +496,7 @@ interact with each other.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>strength</strong> (<em>int</em>) – Strength of the adhesion force.</p></li>
-<li><p><strong>obj</strong> (<em>bpy.types.Object</em><em> | </em><em>None</em>) – Cell to use as origin of the adhesion force.
+<li><p><strong>obj</strong> (<em>Object</em><em> | </em><em>None</em>) – Cell to use as origin of the adhesion force.
 If None, a new object is created.</p></li>
 <li><p><strong>name</strong> (<em>str</em><em> | </em><em>None</em>) – Name of the adhesion force.</p></li>
 <li><p><strong>loc</strong> (<em>tuple</em><em> | </em><em>None</em>) – Initial location of the adhesion force.</p></li>

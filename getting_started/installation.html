@@ -222,7 +222,7 @@
 <li class="toctree-l1"><a class="reference internal" href="hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -270,96 +270,163 @@
         <article role="main" id="furo-main-content">
           <section id="installation">
 <span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
-<ol class="arabic simple">
-<li><p>Install Blender</p></li>
-</ol>
-<p>Goo runs within Blender, so you will first need to download Blender 4.0 from <a class="reference external" href="https://www.blender.org/download/lts/4-0/">here</a>.
-Goo currently support Blender 3.3 to 4.0. We aim to maintain Goo for future Blender LTS versions but might have a slight lag from their releases.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Goo is not currently not compatible with Blender 4.1 because of a dependency clash with the <a class="reference external" href="https://libroadrunner.readthedocs.io/en/latest/index.html">RoadRunner Simulation Engine</a>. Use Blender 4.0 while we are working towards implementing biocircuitery in Goo.</p>
-</div>
-<ol class="arabic" start="2">
-<li><p>Clone the Goo library from <a class="reference external" href="https://github.com/smegason/Goo">GitHub</a>. Download the zip file of the latest release, and unzip it in an empty folder. n Alternatively, it can be downloaded from the command line as follows:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>Goo
-<span class="nb">cd</span><span class="w"> </span>Goo
-wget<span class="w"> </span>&lt;Goo-latest-release&gt;.tar.gz
-tar<span class="w"> </span>-xvf<span class="w"> </span>&lt;Goo-latest-release&gt;.tar.gz
-</pre></div>
-</div>
-</li>
-</ol>
-<ol class="arabic simple" start="2">
-<li><p>In Blender, go to <cite>Edit &gt; Preferences &gt; File Paths &gt; Scripts</cite> and add <cite>&lt;your_root_path&gt;/Goo/scripts</cite>.</p></li>
-</ol>
-<section id="dependencies">
-<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h2>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<section id="blender-installation">
+<h3>Blender Installation<a class="headerlink" href="#blender-installation" title="Link to this heading">¶</a></h3>
+<p>Goo runs in Blender. Currently supported versions:</p>
 <ul class="simple">
-<li><p>python 3.7 or newer</p></li>
-<li><p><a class="reference external" href="https://docs.blender.org/api/current/info_advanced_blender_as_bpy.html">bpy</a> (bundled with Blender)</p></li>
-<li><p><a class="reference external" href="http://www.numpy.org/">numpy</a></p></li>
-<li><p><a class="reference external" href="https://scipy.org/">scipy</a></p></li>
-<li><p><a class="reference external" href="https://tellurium.readthedocs.io/en/latest/antimony.html">antimony</a></p></li>
-<li><p><a class="reference external" href="https://www.libroadrunner.org/">libroadrunner</a></p></li>
-<li><p><a class="reference external" href="https://www.h5py.org/">h5py</a></p></li>
+<li><p><strong>Recommended:</strong> Blender 4.0 LTS (<a class="reference external" href="https://www.blender.org/download/lts/4-0/">Download</a>)</p></li>
+<li><p><strong>Supported:</strong> Blender 3.3 through 4.0</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Blender 4.5 is currently not supported due to compatibility issues with the <a class="reference external" href="https://libroadrunner.readthedocs.io/en/latest/index.html">RoadRunner Simulation Engine</a>. We are actively working on resolving this limitation.</p>
+</div>
+</section>
+<section id="system-requirements">
+<h3>System Requirements<a class="headerlink" href="#system-requirements" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Python 3.10 or newer</p></li>
+<li><dl class="simple">
+<dt>Operating System:</dt><dd><ul>
+<li><p>Windows 10/11</p></li>
+<li><p>macOS 10.15 or newer</p></li>
+<li><p>Linux (major distributions)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
 </ul>
 </section>
-<section id="install-dependencies-in-blender">
-<h2>Install dependencies in Blender<a class="headerlink" href="#install-dependencies-in-blender" title="Link to this heading">¶</a></h2>
-<p>Blender comes with its own Python interpreter, which is isolated from the system’s Python environment.
-Goo requires some additional packages that must installed and then be exposed to Blender.</p>
-<section id="macos-linux">
-<h3>MacOS/Linux<a class="headerlink" href="#macos-linux" title="Link to this heading">¶</a></h3>
-<p>For MacOS and Linux, Goo comes packaged with a Makefile to streamline dependency installation. To use it:</p>
+</section>
+<section id="installing-goo">
+<h2>Installing Goo<a class="headerlink" href="#installing-goo" title="Link to this heading">¶</a></h2>
 <ol class="arabic">
-<li><p>Set the Makefile variables <cite>BLENDER_PATH</cite> and <cite>BPY_PATH</cite> to the paths of the Blender executable and its Python interpreter, respectively.</p>
-<p>For macOS, it is usually in the Applications folder, e.g.:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">BLENDER_PATH</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>/Applications/Blender.app/Contents/MacOS/Blender
-<span class="nv">BPY_PATH</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>/Applications/Blender.app/Contents/Resources/4.0/python/bin/python3.10
+<li><p><strong>Clone Repository</strong></p>
+<p>Clone the Goo repository from GitHub:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/megasonlab/Goo.git
+<span class="nb">cd</span><span class="w"> </span>Goo
 </pre></div>
 </div>
 </li>
-<li><p>Set up the Blender environment:</p>
+<li><p><strong>Run Setup</strong></p>
+<p>Execute the setup command:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>setup
 </pre></div>
 </div>
-</li>
-<li><p>Allow Blender to access the dependency folder:</p>
-<p>In Blender, go to <cite>Edit &gt; Preferences &gt; File Paths &gt; Scripts</cite> and add <cite>&lt;your_root_path&gt;/Goo/hook/scripts</cite>.</p>
+<p>The setup will prompt for your Blender executable location:</p>
+<ul class="simple">
+<li><p><strong>macOS:</strong> <code class="docutils literal notranslate"><span class="pre">/Applications/Blender-x.x.app/Contents/MacOS/Blender</span></code></p></li>
+<li><p><strong>Windows:</strong> <code class="docutils literal notranslate"><span class="pre">C:\\Program</span> <span class="pre">Files\\Blender</span> <span class="pre">Foundation\\Blender</span> <span class="pre">x.x\\blender.exe</span></code></p></li>
+<li><p><strong>Linux:</strong> Typically <code class="docutils literal notranslate"><span class="pre">/usr/bin/blender</span></code> or the installation path</p></li>
+</ul>
+<p>Your Blender path is saved in <code class="docutils literal notranslate"><span class="pre">.blender_path</span></code> for future use.</p>
 </li>
 </ol>
+<section id="how-setup-works">
+<h3>How Setup Works<a class="headerlink" href="#how-setup-works" title="Link to this heading">¶</a></h3>
+<p>The setup process:</p>
+<ol class="arabic simple">
+<li><p>Creates a dedicated hook directory for Goo and its dependencies</p></li>
+<li><p>Sets up an isolated Python environment</p></li>
+<li><p>Installs all required packages</p></li>
+<li><p>Configures Blender to recognize the Goo installation</p></li>
+</ol>
+<p>This approach ensures:</p>
+<ul class="simple">
+<li><p>Clean separation from system Python</p></li>
+<li><p>Version-specific compatibility</p></li>
+<li><p>Easy updates and maintenance</p></li>
+<li><p>No conflicts with Blender’s internal Python</p></li>
+</ul>
 </section>
-<section id="windows">
-<h3>Windows<a class="headerlink" href="#windows" title="Link to this heading">¶</a></h3>
-<p>For Windows, the setup must be done manually.</p>
-<ol class="arabic">
-<li><p>Find the paths of the Blender executable and its Python interpreter.</p>
-<p>These are usually found in Program Files, e.g., <cite>C:\Program Files\Blender Foundation\Blender 4.0\Blender.exe</cite> and <cite>C:\Program Files\Blender Foundation\Blender 4.0\4.0\python\bin\python.exe</cite>.</p>
+</section>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h2>
+<section id="core-dependencies">
+<h3>Core Dependencies<a class="headerlink" href="#core-dependencies" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>bpy</strong> (Blender Python API)</dt><dd><ul>
+<li><p>Bundled with Blender</p></li>
+<li><p>Provides 3D manipulation capabilities</p></li>
+</ul>
+</dd>
+</dl>
 </li>
-<li><p>Create a new virtual environment using Blender’s Python interpreter:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>C:<span class="se">\\</span>Program<span class="w"> </span>Files<span class="se">\\</span>Blender<span class="w"> </span>Foundation<span class="se">\\</span>Blender<span class="w"> </span><span class="m">4</span>.0<span class="se">\\</span><span class="m">4</span>.0<span class="se">\\</span>python<span class="se">\\</span>bin<span class="se">\\</span>python.exe<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.blender_env
+</ul>
+</section>
+<section id="scientific-computing">
+<h3>Scientific Computing<a class="headerlink" href="#scientific-computing" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>numpy</strong> - Numerical computations</p></li>
+<li><p><strong>scipy</strong> - Scientific algorithms</p></li>
+<li><p><strong>xarray</strong> - N-D labeled arrays</p></li>
+</ul>
+</section>
+<section id="simulation-engines">
+<h3>Simulation Engines<a class="headerlink" href="#simulation-engines" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>antimony</strong> - Biological modeling language</p></li>
+<li><p><strong>libroadrunner</strong> - SBML simulation engine</p></li>
+</ul>
+</section>
+<section id="data-handling">
+<h3>Data Handling<a class="headerlink" href="#data-handling" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>h5py</strong> - HDF5 file format support</p></li>
+<li><p><strong>tifffile</strong> - TIFF file handling</p></li>
+</ul>
+<p>All dependencies are automatically managed through our setup process. Manual installation is not recommended as it may lead to version conflicts or compatibility issues.</p>
+</section>
+</section>
+<section id="verification">
+<h2>Verification<a class="headerlink" href="#verification" title="Link to this heading">¶</a></h2>
+<p>To verify your installation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span><span class="nb">test</span>
 </pre></div>
 </div>
-</li>
-<li><p>Install dependencies into the virtual environment</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>.blender_env<span class="se">\\</span>bin<span class="se">\\</span>python.exe<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<p>This will run the test suite to ensure all components are correctly installed and functioning.</p>
+<p>For detailed information about your setup:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>info
 </pre></div>
 </div>
-</li>
-<li><p>Check that the dependencies are installed:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>.blender_env<span class="se">\\</span>bin<span class="se">\\</span>python.exe<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>list
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading">¶</a></h2>
+<p>After installation, we recommend:</p>
+<ol class="arabic simple">
+<li><p>Reviewing the <a class="reference internal" href="../user_guide/api.html"><span class="doc">API documentation</span></a> for API documentation</p></li>
+<li><p>Exploring the Goo modules:
+- <a class="reference internal" href="../user_guide/goo.cell.html"><span class="doc">goo.cell</span></a> for cell manipulation
+- <a class="reference internal" href="../user_guide/goo.force.html"><span class="doc">goo.force</span></a> for force calculations
+- <a class="reference internal" href="../user_guide/goo.growth.html"><span class="doc">goo.growth</span></a> for growth models</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is possible to install the dependencies direclty in the Blender Python interpreter. However, we do not recommend this approach as it might lead to conflicts with the system Python interpreter and is harder to manage across different versions of Blender.</p>
+</div>
+<section id="documentation">
+<h3>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h3>
+<p>Documentation uses Sphinx and follows Google-style docstrings. To build the docs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>docs
 </pre></div>
 </div>
-</li>
-<li><p>Create a “hook” folder that enables the installed packages to be exposed to Blender.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>hook<span class="se">\\</span>scripts<span class="se">\\</span>modules
-xcopy<span class="w"> </span>.blender_venv<span class="se">\\</span>lib<span class="se">\\</span>python3.10<span class="se">\\</span>site-packages<span class="se">\\</span>*<span class="w"> </span>hook<span class="se">\\</span>scripts<span class="se">\\</span>modules<span class="w"> </span>/E<span class="w"> </span>/H<span class="w"> </span>/I
-</pre></div>
-</div>
-</li>
-<li><p>Allow Blender to access the dependency folder:</p>
-<p>In Blender, go to <cite>Edit &gt; Preferences &gt; File Paths &gt; Scripts</cite> and add <cite>&lt;your_root_path&gt;/Goo/hook/scripts</cite>.</p>
-</li>
+<p>This will:</p>
+<ol class="arabic simple">
+<li><p>Use Blender’s Python interpreter to ensure compatibility</p></li>
+<li><p>Build HTML documentation in <code class="docutils literal notranslate"><span class="pre">docs/build/html</span></code></p></li>
+<li><p>Include all necessary dependencies from your setup</p></li>
+</ol>
+<p>The documentation will be available at <code class="docutils literal notranslate"><span class="pre">docs/build/html/index.html</span></code>.</p>
+<p>Publishing documentation:</p>
+<ol class="arabic simple">
+<li><p>Build the documentation as shown above</p></li>
+<li><p>Copy contents from <code class="docutils literal notranslate"><span class="pre">docs/build/html</span></code> to a temporary directory</p></li>
+<li><p>Switch to the <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch</p></li>
+<li><p>Copy the contents from the temporary directory to the root</p></li>
+<li><p>Commit and create a pull request</p></li>
 </ol>
 </section>
 </section>
@@ -421,10 +488,25 @@ xcopy<span class="w"> </span>.blender_venv<span class="se">\\</span>lib<span cla
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Installation</a><ul>
-<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
-<li><a class="reference internal" href="#install-dependencies-in-blender">Install dependencies in Blender</a><ul>
-<li><a class="reference internal" href="#macos-linux">MacOS/Linux</a></li>
-<li><a class="reference internal" href="#windows">Windows</a></li>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
+<li><a class="reference internal" href="#blender-installation">Blender Installation</a></li>
+<li><a class="reference internal" href="#system-requirements">System Requirements</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#installing-goo">Installing Goo</a><ul>
+<li><a class="reference internal" href="#how-setup-works">How Setup Works</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dependencies">Dependencies</a><ul>
+<li><a class="reference internal" href="#core-dependencies">Core Dependencies</a></li>
+<li><a class="reference internal" href="#scientific-computing">Scientific Computing</a></li>
+<li><a class="reference internal" href="#simulation-engines">Simulation Engines</a></li>
+<li><a class="reference internal" href="#data-handling">Data Handling</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#verification">Verification</a></li>
+<li><a class="reference internal" href="#next-steps">Next Steps</a><ul>
+<li><a class="reference internal" href="#documentation">Documentation</a></li>
 </ul>
 </li>
 </ul>

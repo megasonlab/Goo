@@ -222,7 +222,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../getting_started/hardware.html">Hardware recommendations</a></li>
 </ul>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer_guide/developers.html">Developer’s Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../developer_guide/learning_resources.html">Learning resources</a></li>
 </ul>
 <ul>
@@ -274,16 +274,17 @@
 <dt class="sig sig-object py" id="goo.handler.ColorizeHandler">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.handler.</span></span><span class="sig-name descname"><span class="pre">ColorizeHandler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">colorizer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#goo.handler.Colorizer" title="goo.handler.Colorizer"><span class="pre">Colorizer</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Colorizer.PRESSURE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="goo.gene.html#goo.gene.Gene" title="goo.gene.Gene"><span class="pre">Gene</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">range</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/handler.html#ColorizeHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.ColorizeHandler" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#goo.handler.Handler" title="goo.handler.Handler"><code class="xref py py-class docutils literal notranslate"><span class="pre">Handler</span></code></a></p>
-<p>Handler for coloring cells based off of a specified property.</p>
-<p>Cells are colored on a blue-red spectrum, based on the relative value
-of the specified property to all other cells. For example, the cell with
-the highest pressure is colored red, while the cell with an average
-pressure is colored purple.</p>
+<p>Handler for coloring cells based on a specified property.</p>
+<p>Cells are colored on a blue-red spectrum based on the relative value
+of the specified property to all other cells. In RANDOM mode, cells
+cycle through a fixed 20-color palette.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Variables<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>colorizer</strong> (<a class="reference internal" href="#goo.handler.Colorizer" title="goo.handler.Colorizer"><em>Colorizer</em></a>) – the property by which cells are colored.</p></li>
-<li><p><strong>gene</strong> (<em>str</em>) – optional, the gene off of which cell color is based.</p></li>
+<li><p><strong>colorizer</strong> (<a class="reference internal" href="#goo.handler.Colorizer" title="goo.handler.Colorizer"><em>Colorizer</em></a>) – The property by which cells are colored.</p></li>
+<li><p><strong>gene</strong> (<em>str</em>) – Optional, the gene off of which cell color is based.</p></li>
+<li><p><strong>range</strong> (<em>tuple</em>) – Optional, range of values for the colorizer. If provided,
+values are scaled relative to this range instead of min-max normalization.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Parameters<span class="colon">:</span></dt>
@@ -297,17 +298,7 @@ pressure is colored purple.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="goo.handler.ColorizeHandler.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depsgraph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/handler.html#ColorizeHandler.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.ColorizeHandler.run" title="Link to this definition">¶</a></dt>
-<dd><p>Run the handler.</p>
-<p>This is the function that gets passed to Blender, to be called
-upon specified events (e.g. post-frame change).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>scene</strong> – The Blender scene.</p></li>
-<li><p><strong>depsgraph</strong> – The dependency graph.</p></li>
-</ul>
-</dd>
-</dl>
+<dd><p>Applies coloring to cells based on the selected property.</p>
 </dd></dl>
 
 </dd></dl>
@@ -316,7 +307,7 @@ upon specified events (e.g. post-frame change).</p>
 <dt class="sig sig-object py" id="goo.handler.Colorizer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.handler.</span></span><span class="sig-name descname"><span class="pre">Colorizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#goo.handler.Colorizer" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
-<p>An enumeration.</p>
+<p>Color map for the random cell colorizer.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="goo.handler.Colorizer.GENE">
 <span class="sig-name descname"><span class="pre">GENE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#goo.handler.Colorizer.GENE" title="Link to this definition">¶</a></dt>
@@ -567,15 +558,15 @@ upon specified events (e.g. post-frame change).</p>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="goo.handler.Handler.run">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bpy.types.Scene</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depsgraph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bpy.types.Depsgraph</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/goo/handler.html#Handler.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.Handler.run" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Scene</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depsgraph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Depsgraph</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/goo/handler.html#Handler.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.Handler.run" title="Link to this definition">¶</a></dt>
 <dd><p>Run the handler.</p>
 <p>This is the function that gets passed to Blender, to be called
 upon specified events (e.g. post-frame change).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>scene</strong> (<em>bpy.types.Scene</em>) – The Blender scene.</p></li>
-<li><p><strong>depsgraph</strong> (<em>bpy.types.Depsgraph</em>) – The dependency graph.</p></li>
+<li><p><strong>scene</strong> (<em>Scene</em>) – The Blender scene.</p></li>
+<li><p><strong>depsgraph</strong> (<em>Depsgraph</em>) – The dependency graph.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -729,6 +720,130 @@ upon specified events (e.g. post-frame change).</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.handler.</span></span><span class="sig-name descname"><span class="pre">SliceExporter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(512,</span> <span class="pre">512,</span> <span class="pre">512)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(0.5,</span> <span class="pre">0.5,</span> <span class="pre">0.5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">microscope_dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">downscale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#goo.handler.Handler" title="goo.handler.Handler"><code class="xref py py-class docutils literal notranslate"><span class="pre">Handler</span></code></a></p>
+<p>Handler to save point cloud data of the simulation at each frame and convert to 3D array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_dir</strong> (<em>str</em>) – The directory to save the point cloud data.</p></li>
+<li><p><strong>resolution</strong> (<em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>, </em><em>int</em><em>]</em>) – The resolution of the grid to save the point cloud data.
+Default is (256, 256, 256).</p></li>
+<li><p><strong>scale</strong> (<em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>, </em><em>float</em><em>]</em>) – The scale of the grid to save the point cloud data.
+Default is (0.2, 0.2, 0.2).</p></li>
+<li><p><strong>microscope_dt</strong> (<em>int</em>) – The time step of the microscope.
+Default is 10.</p></li>
+<li><p><strong>padding</strong> (<em>float</em>) – The padding of the grid to save the point cloud data.
+Default is 5.0.</p></li>
+<li><p><strong>downscale</strong> (<em>int</em><em> | </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>int</em><em>, </em><em>int</em><em>]</em>) – The downscaling factor for the low-resolution version.
+Can be a single integer or a tuple of integers for each dimension.
+Default is None (no downscaling).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter.downsample_volume">
+<span class="sig-name descname"><span class="pre">downsample_volume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">volume</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter.downsample_volume"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter.downsample_volume" title="Link to this definition">¶</a></dt>
+<dd><p>Downsample the volume array and adjust the scale accordingly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>volume</strong> (<em>ndarray</em>) – The original volume array</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(downsampled_volume, new_scale)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter.get_scene_bounds">
+<span class="sig-name descname"><span class="pre">get_scene_bounds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter.get_scene_bounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter.get_scene_bounds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the bounding box of all visible mesh objects in the scene.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(min_coords, max_coords) representing the bounding box</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter.points_to_volume">
+<span class="sig-name descname"><span class="pre">points_to_volume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter.points_to_volume"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter.points_to_volume" title="Link to this definition">¶</a></dt>
+<dd><p>Convert point cloud to a 3D volume array with continuous surfaces.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>points</strong> (<em>ndarray</em>) – Array of points in world coordinates</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>3D volume array with continuous surfaces</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ndarray</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scene</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Scene</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depsgraph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Depsgraph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter.run" title="Link to this definition">¶</a></dt>
+<dd><p>Run the point cloud export process for each frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scene</strong> (<em>Scene</em>) – The Blender scene.</p></li>
+<li><p><strong>depsgraph</strong> (<em>Depsgraph</em>) – The dependency graph.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter.sample_mesh_points">
+<span class="sig-name descname"><span class="pre">sample_mesh_points</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">200000</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter.sample_mesh_points"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter.sample_mesh_points" title="Link to this definition">¶</a></dt>
+<dd><p>Sample points densely and uniformly from a mesh object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>obj</strong> (<em>Object</em>) – The mesh object to sample from</p></li>
+<li><p><strong>num_points</strong> (<em>int</em>) – Number of points to sample (increased for better coverage)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Array of sampled points in world coordinates</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ndarray</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="goo.handler.SliceExporter.world_to_grid_coords">
+<span class="sig-name descname"><span class="pre">world_to_grid_coords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">world_coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../_modules/goo/handler.html#SliceExporter.world_to_grid_coords"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.SliceExporter.world_to_grid_coords" title="Link to this definition">¶</a></dt>
+<dd><p>Convert world coordinates to grid coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>world_coords</strong> (<em>ndarray</em>) – World space coordinates</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Grid coordinates</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ndarray</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="goo.handler.StopHandler">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">goo.handler.</span></span><span class="sig-name descname"><span class="pre">StopHandler</span></span><a class="reference internal" href="../_modules/goo/handler.html#StopHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.StopHandler" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#goo.handler.Handler" title="goo.handler.Handler"><code class="xref py py-class docutils literal notranslate"><span class="pre">Handler</span></code></a></p>
@@ -749,6 +864,23 @@ upon specified events (e.g. post-frame change).</p>
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="goo.handler.save_tiff">
+<span class="sig-prename descclassname"><span class="pre">goo.handler.</span></span><span class="sig-name descname"><span class="pre">save_tiff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/goo/handler.html#save_tiff"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#goo.handler.save_tiff" title="Link to this definition">¶</a></dt>
+<dd><p>Save a numpy array as a TIFF file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>ndarray</em>) – The numpy array to save</p></li>
+<li><p><strong>path</strong> (<em>str</em>) – The path where to save the TIFF file</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -876,10 +1008,20 @@ upon specified events (e.g. post-frame change).</p>
 <li><a class="reference internal" href="#goo.handler.RemeshHandler.run"><code class="docutils literal notranslate"><span class="pre">RemeshHandler.run()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#goo.handler.SliceExporter"><code class="docutils literal notranslate"><span class="pre">SliceExporter</span></code></a><ul>
+<li><a class="reference internal" href="#goo.handler.SliceExporter.downsample_volume"><code class="docutils literal notranslate"><span class="pre">SliceExporter.downsample_volume()</span></code></a></li>
+<li><a class="reference internal" href="#goo.handler.SliceExporter.get_scene_bounds"><code class="docutils literal notranslate"><span class="pre">SliceExporter.get_scene_bounds()</span></code></a></li>
+<li><a class="reference internal" href="#goo.handler.SliceExporter.points_to_volume"><code class="docutils literal notranslate"><span class="pre">SliceExporter.points_to_volume()</span></code></a></li>
+<li><a class="reference internal" href="#goo.handler.SliceExporter.run"><code class="docutils literal notranslate"><span class="pre">SliceExporter.run()</span></code></a></li>
+<li><a class="reference internal" href="#goo.handler.SliceExporter.sample_mesh_points"><code class="docutils literal notranslate"><span class="pre">SliceExporter.sample_mesh_points()</span></code></a></li>
+<li><a class="reference internal" href="#goo.handler.SliceExporter.world_to_grid_coords"><code class="docutils literal notranslate"><span class="pre">SliceExporter.world_to_grid_coords()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#goo.handler.StopHandler"><code class="docutils literal notranslate"><span class="pre">StopHandler</span></code></a><ul>
 <li><a class="reference internal" href="#goo.handler.StopHandler.run"><code class="docutils literal notranslate"><span class="pre">StopHandler.run()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#goo.handler.save_tiff"><code class="docutils literal notranslate"><span class="pre">save_tiff()</span></code></a></li>
 </ul>
 </li>
 </ul>
