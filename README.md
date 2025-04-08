@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10296203.svg)](https://doi.org/10.5281/zenodo.10296203) [![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)](https://opensource.org/licenses/BSD-2-Clause)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10296203.svg)](https://doi.org/10.5281/zenodo.10296203) [![License](https://img.shields.io/badge/License-BSD%203--Clause-orange.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 
 # Goo is a Python-based Blender extension for modeling biological cells, tissues, and embryos
