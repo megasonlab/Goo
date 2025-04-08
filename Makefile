@@ -144,8 +144,8 @@ update_modules:
 
 clean:
 	@printf "$(YELLOW)$(BOLD)Cleaning up...$(RESET)\n"
-	@rm -rf .blender_venv4.0 .blender_venv4.1
-	@rm -rf hook_blender*
+	@rm -rf .blender_venv .blender_venv*
+	@rm -rf hook_blender* hook
 	@rm -rf temp_install
 	@printf "$(GREEN)Cleanup complete!$(RESET)\n"
 
