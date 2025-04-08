@@ -1,7 +1,5 @@
-from importlib import reload
 import goo
 
-reload(goo)
 goo.reset_modules()
 goo.reset_scene()
 
@@ -21,7 +19,7 @@ cell2.stiffness = 5
 cell3.stiffness = 5
 cell4.stiffness = 5
 cell5.stiffness = 5
-output_dir = "/Users/antoine/Harvard/MegasonLab/GPU_backup/AntoineRuzette/goo/data/slice_exporter/20250320_microsim/pointcloud_highres"
+output_dir = "~/pointcloud"
 
 sim = goo.Simulator(celltypes=[celltype], time=500, physics_dt=1)
 sim.setup_world()
