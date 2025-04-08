@@ -1,18 +1,34 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [project]
 name = "goo"
-version = "1.1.0"
+dynamic = ["version"]
 description = "Goo is a library to simulate 3D biological cells, tissues and embryos in Blender."
-authors = [
-    {name = "Antoine A. Ruzette"},
-    {name = "Sean Megason", email = "sean_megason@hms.harvard.edu"}
-]
-license = {text = "BSD 2-clause"}
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
+license = { text = "BSD-2-Clause" }
+authors = [
+    { name = "Antoine A. Ruzette" },
+    { name = "Sean Megason", email = "sean_megason@hms.harvard.edu" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
 
 # Core dependencies that are common to all Blender versions
 dependencies = [
@@ -42,10 +58,16 @@ blender45 = [
 # Development tools
 dev = [
     "pytest==8.3.4",
+    "pytest-cov>=6.0.0",
     "Sphinx==7.3.7",
     "sphinx_copybutton==0.5.2",
     "furo==2024.8.6",
-    "sphinxcontrib.video==0.3.1"
+    "sphinxcontrib.video==0.3.1",
+    "mypy",
+    "ruff",
+    "pre-commit",
+    "hatch",
+    "uv",
 ]
 
 # Documentation tools
@@ -54,4 +76,53 @@ docs = [
     "sphinx_copybutton==0.5.2",
     "furo==2024.8.6",
     "sphinxcontrib.video==0.3.1"
+]
+
+[project.urls]
+homepage = "https://github.com/MegasonLab/Goo"
+repository = "https://github.com/MegasonLab/Goo"
+
+[tool.uv.sources]
+goo = { workspace = true }
+
+[tool.ruff]
+line-length = 88
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # style errors
+    "W",    # style warnings
+    "F",    # flakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "RUF",  # ruff-specific rules
+]
+
+[tool.mypy]
+files = "src/**/"
+strict = true
+show_error_codes = true
+pretty = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore:unclosed transport:ResourceWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "raise NotImplementedError",
+    "pass",
 ]
