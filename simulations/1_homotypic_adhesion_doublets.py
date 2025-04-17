@@ -1,5 +1,7 @@
+from importlib import reload
 import goo
 
+reload(goo)
 goo.reset_modules()
 goo.reset_scene()
 
@@ -27,6 +29,7 @@ sim.add_handlers(
         goo.GrowthPIDHandler(),
         goo.RecenterHandler(),
         goo.DataExporter(
+            # path="/Users/antoine/Harvard/MegasonLab/GPU_backup/AntoineRuzette/goo/data/docker_export_test/out.json",
             options=goo.DataFlag.MOTION_PATH,
         ),
     ]

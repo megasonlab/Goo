@@ -375,13 +375,11 @@ class ColorizeHandler(Handler):
             
         red, blue = Vector((1.0, 0.0, 0.0)), Vector((0.0, 0.0, 1.0))
 
-        print(f"\nProcessing cells with colorizer={self.colorizer}")
         if self.gene:
             print(f"Using gene: {self.gene}")
 
         property_values = None
         if self.colorizer != Colorizer.RANDOM:
-            print("\nCollecting property values...")
             property_values = {
                 Colorizer.PRESSURE: np.array([
                     cell.pressure if (cell.cloth_mod and 
@@ -402,7 +400,6 @@ class ColorizeHandler(Handler):
                 print(f"Error: Invalid colorizer type: {self.colorizer}")
                 raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, or RANDOM.")
         else:
-            print("\nUsing random colors")
             # Assign colors in a deterministic sequence from the fixed palette
             for cell in cells:
                 if cell.just_divided or cell.name not in self.color_map:
@@ -410,18 +407,13 @@ class ColorizeHandler(Handler):
                     self.color_counter += 1
             values = [self.color_map[cell.name] for cell in cells]
 
-        print("\nApplying colors to cells...")
         # Apply colors to cells
         for cell, value in zip(cells, values):
             if self.colorizer == Colorizer.RANDOM:
                 color = value
             else:
                 color = tuple(blue.lerp(red, value))
-            print(f"\nCell {cell.name}:")
-            print(f"  Value: {value}")
-            print(f"  Final color: {color}")
             cell.recolor(color)
-        print("\n=== ColorizeHandler Run Complete ===")
                 
 
 def _get_divisions(cells: list[Cell]) -> list[tuple[str, str, str]]:
@@ -623,7 +615,8 @@ class DataExporter(Handler):
             self.h5file.attrs['seed'] = bpy.context.scene["seed"]
             self.frames_group = self.h5file.create_group('frames')
         else:
-            print({"seed": bpy.context.scene["seed"], "frames": []})
+            # print({"seed": bpy.context.scene["seed"], "frames": []})
+            pass
 
     @override
     def run(self, scene, depsgraph) -> None:

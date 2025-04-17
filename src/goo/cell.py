@@ -118,6 +118,9 @@ class Cell(BlenderObject):
             The vector representing the center of mass of the cell.
         """
         vert_coords = self.vertices(local_coords)
+        if len(vert_coords) == 0:
+            # If no vertices, return the cell's current location
+            return self.loc if not local_coords else Vector((0, 0, 0))
         com = Vector(np.mean(vert_coords, axis=0))
         return com
 
@@ -129,10 +132,14 @@ class Cell(BlenderObject):
         Returns:
             The aspect ration value for a cell.
         """
-        major_axis = self.major_axis().length()
-        minor_axis = self.minor_axis().length()
-        aspect_ratio = major_axis / minor_axis
-        return aspect_ratio
+        try:
+            major_axis = self.major_axis().length()
+            minor_axis = self.minor_axis().length()
+            aspect_ratio = major_axis / minor_axis
+            return aspect_ratio
+        except (ValueError, ZeroDivisionError, AttributeError):
+            # Return 1.0 (perfect sphere) if we can't calculate the aspect ratio
+            return 1.0
 
     def sphericity(self) -> float:
         """Calculates the sphericity of the cell.
@@ -194,19 +201,29 @@ class Cell(BlenderObject):
             extreme projections along this vector.
         """
         verts = self.vertices()
+        
+        if len(verts) < 2:
+            # If not enough vertices, return a default axis
+            default_axis = Vector((1, 0, 0) if n == 0 else (0, 1, 0) if n == 1 else (0, 0, 1))
+            return Axis(default_axis, Vector((0, 0, 0)), Vector((1, 0, 0)), self.obj_eval.matrix_world)
 
-        # Calculate the eigenvectors and eigenvalues of the covariance matrix
-        covariance_matrix = np.cov(verts, rowvar=False)
-        eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
-        eigenvectors = eigenvectors[:, eigenvalues.argsort()[::-1]]
-        axis = eigenvectors[:, n]
+        try:
+            # Calculate the eigenvectors and eigenvalues of the covariance matrix
+            covariance_matrix = np.cov(verts, rowvar=False)
+            eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
+            eigenvectors = eigenvectors[:, eigenvalues.argsort()[::-1]]
+            axis = eigenvectors[:, n]
 
-        projections = verts @ axis
-        min_index = np.argmin(projections)
-        max_index = np.argmax(projections)
-        first_vertex = Vector(verts[min_index])
-        last_vertex = Vector(verts[max_index])
-        return Axis(Vector(axis), first_vertex, last_vertex, self.obj_eval.matrix_world)
+            projections = verts @ axis
+            min_index = np.argmin(projections)
+            max_index = np.argmax(projections)
+            first_vertex = Vector(verts[min_index])
+            last_vertex = Vector(verts[max_index])
+            return Axis(Vector(axis), first_vertex, last_vertex, self.obj_eval.matrix_world)
+        except (ValueError, np.linalg.LinAlgError):
+            # If eigen decomposition fails, return a default axis
+            default_axis = Vector((1, 0, 0) if n == 0 else (0, 1, 0) if n == 1 else (0, 0, 1))
+            return Axis(default_axis, Vector((0, 0, 0)), Vector((1, 0, 0)), self.obj_eval.matrix_world)
 
     def major_axis(self) -> Axis:
         """Returns the major axis of the cell."""
@@ -245,12 +262,82 @@ class Cell(BlenderObject):
         Returns:
             List of coordinates of vertices.
         """
-        verts = self.obj_eval.data.vertices
-        if local_coords:
-            return [v.co.copy() for v in verts]
-        else:
-            matrix_world = self.obj_eval.matrix_world
-            return [matrix_world @ v.co for v in verts]
+        try:
+            verts = self.obj_eval.data.vertices
+            if len(verts) == 0:
+                print(f"Warning: Cell {self.name} has no vertices - this may indicate a collapsed cell")
+                return []
+            if local_coords:
+                return [v.co.copy() for v in verts]
+            else:
+                matrix_world = self.obj_eval.matrix_world
+                return [matrix_world @ v.co for v in verts]
+        except (AttributeError, RuntimeError) as e:
+            print(f"Warning: Error accessing vertices for cell {self.name}: {str(e)}")
+            return []
+
+    def is_collapsed(self) -> bool:
+        """Checks if the cell has collapsed or is in an invalid state.
+        
+        A cell is considered collapsed if:
+        1. It has no vertices
+        2. Its volume is zero or negative
+        3. Its mesh is invalid
+        
+        Returns:
+            bool: True if the cell is collapsed, False otherwise
+        """
+        try:
+            # Check for zero vertices
+            if len(self.vertices()) == 0:
+                return True
+                
+            # Check for invalid volume
+            volume = self.volume()
+            if volume <= 0:
+                return True
+                
+            # Check for invalid mesh
+            if not self.obj_eval or not self.obj_eval.data or not self.obj_eval.data.vertices:
+                return True
+                
+            return False
+        except Exception as e:
+            print(f"Warning: Error checking if cell {self.name} is collapsed: {str(e)}")
+            return True
+
+    def attempt_recovery(self) -> bool:
+        """Attempts to recover a collapsed cell by remeshing and recentering.
+        
+        Returns:
+            bool: True if recovery was successful, False otherwise
+        """
+        try:
+            if not self.is_collapsed():
+                return True
+                
+            print(f"Attempting to recover collapsed cell {self.name}")
+            
+            # Store current location
+            current_loc = self.loc
+            
+            # Try to remesh with a smaller voxel size for better detail
+            self.remesh(voxel_size=0.5)
+            
+            # Recenter the cell
+            self.recenter()
+            
+            # Verify recovery
+            if not self.is_collapsed():
+                print(f"Successfully recovered cell {self.name}")
+                return True
+                
+            print(f"Failed to recover cell {self.name}")
+            return False
+            
+        except Exception as e:
+            print(f"Error during recovery of cell {self.name}: {str(e)}")
+            return False
 
     def recenter(self, origin=True, forces=True):
         """Recenter cell origin to center of mass of cell, 
@@ -269,7 +356,7 @@ class Cell(BlenderObject):
         for force in self.adhesion_forces:
             force.loc = self.loc
 
-    def remesh(self, voxel_size: float = 0.45, smooth: bool = True) -> None:
+    def remesh(self, voxel_size: float = 0.65, smooth: bool = True) -> None:
         """Remesh the underlying mesh representation of the cell.
 
         Remeshing is done using the built-in `voxel_remesh()`.
@@ -740,18 +827,34 @@ def store_settings(mod: bpy.types.bpy_struct) -> dict:
     return settings
 
 
-def declare_settings(mod: bpy.types.bpy_struct, settings: dict):
-    """Recursively apply stored settings to a Blender modifier.
-
-    Args:
-        mod: The Blender modifier to which the settings are applied.
-        settings: A dictionary containing the settings.
-    """
+def declare_settings(mod: bpy.types.bpy_struct, settings: dict, path="mod"):
     for id, setting in settings.items():
-        if isinstance(setting, dict):
-            declare_settings(getattr(mod, id), settings[id])
-        else:
-            setattr(mod, id, setting)
+        try:
+            if isinstance(setting, dict):
+                submod = getattr(mod, id, None)
+                if submod is not None:
+                    declare_settings(submod, setting, path=f"{path}.{id}")
+                else:
+                    print(f"Warning: {path} has no attribute '{id}'")
+            else:
+                prop = mod.bl_rna.properties.get(id)
+                if prop is not None:
+                    if hasattr(prop, 'array_length') and isinstance(setting, (list, tuple)):
+                        expected_len = prop.array_length
+                        if len(setting) == expected_len:
+                            try:
+                                coerced = tuple(float(x) for x in setting)
+                                setattr(mod, id, coerced)
+                            except Exception as e:
+                                print(f"Warning: Could not coerce {path}.{id} to float tuple: {e}")
+                        else:
+                            print(f"Warning: {path}.{id} expected length {expected_len}, got {len(setting)}")
+                    else:
+                        setattr(mod, id, setting)
+                else:
+                    setattr(mod, id, setting)
+        except Exception as e:
+            print(f"Warning: Could not set {path}.{id}: {e}")
 
 
 class CellType:
