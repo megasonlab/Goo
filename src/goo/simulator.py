@@ -187,6 +187,12 @@ class Simulator:
         """Add multiple handlers to the simulation."""
         # always include a stop handler
         stop_handler = StopHandler()
+        # Initialize the stop handler with the same parameters as other handlers
+        stop_handler.setup(
+            self.get_cells_func(),
+            self.get_diffsystem_func(),
+            self.physics_dt,
+        )
         bpy.app.handlers.frame_change_pre.append(stop_handler.run)
         
         for handler in handlers:

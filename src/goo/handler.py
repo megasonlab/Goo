@@ -66,7 +66,34 @@ class Handler(ABC):
 class StopHandler(Handler):
     """Handler for stopping the simulation at the end of the simulation time."""
 
+    def __init__(self):
+        super().__init__()
+        self.get_cells = None
+        self.get_diffsystem = None
+        self.dt = None
+
+    def setup(
+        self,
+        get_cells: Callable[[], list[Cell]],
+        get_diffsystem: Callable[[], DiffusionSystem],
+        dt: float,
+    ) -> None:
+        """Set up the handler.
+
+        Args:
+            get_cells: A function that, when called,
+                retrieves the list of cells that may divide.
+            dt: The time step for the simulation.
+        """
+        self.get_cells = get_cells
+        self.get_diffsystem = get_diffsystem
+        self.dt = dt
+
     def run(self, scene, depsgraph):
+        if not self.get_cells:
+            print("Warning: StopHandler not properly initialized. Call setup() first.")
+            return
+
         # Check if the current frame is the last frame
         if scene.frame_current >= bpy.context.scene.frame_end:
             print(f"Simulation has reached the last frame: {scene.frame_current}. \
