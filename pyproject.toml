@@ -37,7 +37,7 @@ dependencies = [
     "tifffile>=2025.3.13",
     "xarray>=2025.3.0",
     "antimony>=2.14.0",
-    "libroadrunner==2.7.0",
+    "libroadrunner==2.7",
 ]
 
 [project.optional-dependencies]
