@@ -81,11 +81,12 @@ class StopHandler(Handler):
             frame_str = f"Calculating frame {scene.frame_current}"
             total_length = len(frame_str) + 8
             border_line = "=" * total_length
+            cell_count = len(self.get_cells())
 
             print(border_line)
             print(f"=== {frame_str} ===")
             print(border_line)
-
+            print(f"Number of cells: {cell_count}")
 
 class RemeshHandler(Handler):
     """Handler for remeshing cells at given frequencies.
@@ -328,55 +329,39 @@ class ColorizeHandler(Handler):
         gene: Union[Gene, str] = None,
         range: Optional[tuple] = None,
     ):
-        print("\n=== ColorizeHandler Initialization ===")
+
         self.colorizer = colorizer
         self.gene = gene
         self.range = range
         self.color_map = {}
         self.color_counter = 0
-        print(f"Initialized ColorizeHandler with colorizer={colorizer}, gene={gene}, range={range}")
 
     def _scale(self, values):
         """Scale values using the specified range instead of min-max normalization."""
-        print("\n=== Scaling Values ===")
         if len(values) == 0:
             print("No values to scale")
             return np.array([])
         
-        print(f"Input values: {values}")
-        
         # Use the specified range (0.5, 2.5) instead of min-max
-        min_val, max_val = 0.5, 2.5
-        print(f"Using fixed range: min={min_val}, max={max_val}")
-        
+        min_val, max_val = 0.5, 2.5        
         # Clip values to the range
         values = np.clip(values, min_val, max_val)
-        print(f"After clipping: {values}")
-        
+
         # Scale to [0, 1] using the fixed range
         if max_val - min_val == 0:
             print("Warning: max_val - min_val is 0, returning all ones")
             return np.ones_like(values)
             
         scaled = (values - min_val) / (max_val - min_val)
-        print(f"After scaling: {scaled}")
         return scaled
 
     def run(self, scene, depsgraph):
-        """Applies coloring to cells based on the selected property."""
-        print("\n=== ColorizeHandler Run ===")
-        print(f"Frame: {scene.frame_current}")
-        
+        """Applies coloring to cells based on the selected property."""        
         cells = self.get_cells()
-        print(f"Number of cells: {len(cells)}")
         if len(cells) == 0:
-            print("No cells found!")
             return
             
         red, blue = Vector((1.0, 0.0, 0.0)), Vector((0.0, 0.0, 1.0))
-
-        if self.gene:
-            print(f"Using gene: {self.gene}")
 
         property_values = None
         if self.colorizer != Colorizer.RANDOM:
@@ -393,9 +378,7 @@ class ColorizeHandler(Handler):
             }.get(self.colorizer, None)
 
             if property_values is not None:
-                print(f"\nRaw property values: {property_values}")
                 values = self._scale(property_values)
-                print(f"Final scaled values: {values}")
             else:
                 print(f"Error: Invalid colorizer type: {self.colorizer}")
                 raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, or RANDOM.")
@@ -615,7 +598,6 @@ class DataExporter(Handler):
             self.h5file.attrs['seed'] = bpy.context.scene["seed"]
             self.frames_group = self.h5file.create_group('frames')
         else:
-            # print({"seed": bpy.context.scene["seed"], "frames": []})
             pass
 
     @override
@@ -784,7 +766,6 @@ class DataExporter(Handler):
     def close(self):
         """Close the HDF5 file."""
         if self.h5file:
-            print("Closing HDF5 file.")
             self.h5file.close()
             self.h5file = None
 
