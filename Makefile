@@ -112,7 +112,7 @@ HOOK_PACKAGES = $(HOOK_DIR)/scripts/modules
 
 TEST_DIR = unit_tests
 
-.PHONY: update_modules clean create_venv install_requirements create_hook test testone install setup_hook all info docs
+.PHONY: update_modules clean create_venv install_requirements create_hook test testone install setup_hook all info docs goo
 
 # --- Use these targets ---
 info:
@@ -222,10 +222,45 @@ help:
 	@printf "  $(YELLOW)docs$(RESET)      - Build documentation using Blender Python\n"
 	@printf "  $(YELLOW)clean$(RESET)     - Clean all generated files\n"
 	@printf "  $(YELLOW)update_modules$(RESET) - Update hook modules\n"
+	@printf "  $(YELLOW)goo$(RESET)       - Update Goo library in Blender and hook directory\n"
 	@printf "\n"
 	@printf "$(GREEN)Usage:$(RESET)\n"
 	@printf "  $(YELLOW)make setup$(RESET)\n"
 	@printf "\n"
 	@printf "$(GREEN)Example:$(RESET)\n"
 	@printf "  $(YELLOW)make setup$(RESET)\n"
+	@printf "  $(YELLOW)make goo$(RESET)   - Update Goo library during development\n"
 	@printf "$(CYAN)$(BOLD)========================$(RESET)\n"
+
+.PHONY: goo
+goo:
+	@printf "$(CYAN)$(BOLD)=== Updating Goo Library ===$(RESET)\n"
+	@if [ -z "$(BLENDER_PATH)" ]; then \
+		printf "$(RED)$(BOLD)Error:$(RESET) Please run 'make setup' first\n"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(BLENDER_PATH)" ]; then \
+		printf "$(RED)$(BOLD)Error:$(RESET) Blender executable not found at $(BLENDER_PATH)\n"; \
+		printf "$(YELLOW)Please run 'make setup' again with the correct path$(RESET)\n"; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)✓ Blender executable found$(RESET)\n"
+	@printf "$(GREEN)Detected Blender version:$(RESET) $(BLENDER_VERSION)\n"
+	@printf "$(GREEN)Using Python version:$(RESET) $(PYTHON_VERSION)\n"
+	@printf "$(YELLOW)This will update the Goo library in:$(RESET)\n"
+	@printf "  1. Blender's Python path\n"
+	@printf "  2. Hook directory\n\n"
+	@printf "$(YELLOW)Press Enter to continue or Ctrl+C to cancel...$(RESET)\n"
+	@read
+	
+	@printf "$(CYAN)Copying Goo library to Blender's Python path...$(RESET)\n"
+	@mkdir -p $(BLENDER_DIR)$(BLENDER_VERSION)/scripts/modules/goo
+	@cp -r src/goo/* $(BLENDER_DIR)$(BLENDER_VERSION)/scripts/modules/goo/
+	@printf "$(GREEN)✓ Updated in Blender's Python path$(RESET)\n"
+	
+	@printf "$(CYAN)Copying Goo library to hook directory...$(RESET)\n"
+	@mkdir -p $(HOOK_PACKAGES)/goo
+	@cp -r src/goo/* $(HOOK_PACKAGES)/goo/
+	@printf "$(GREEN)✓ Updated in hook directory$(RESET)\n"
+	
+	@printf "$(GREEN)✓ Goo library updated successfully in all locations$(RESET)\n"
