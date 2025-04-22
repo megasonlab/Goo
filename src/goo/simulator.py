@@ -23,6 +23,7 @@ class Simulator:
         time (List[int]): Start and end frames.
         physics_dt (int): Time step for physics simulation.
         molecular_dt (int): Time step for molecular simulation.
+        max_cells (Optional[int]): Maximum number of cells to include in the simulation.
 
     """
 
@@ -34,6 +35,7 @@ class Simulator:
         time: int = 250,
         physics_dt: int = 1,
         molecular_dt: int = 1,
+        max_cells: Optional[int] = None,
     ):
         self.celltypes = celltypes
         # takes first possible diffsystem
@@ -44,6 +46,7 @@ class Simulator:
         self.addons = []  # Removing add_mesh_extra_objects as it's causing issues in 4.5
         self.render_format: Render = Render.PNG
         self.time = time
+        self.max_cells = max_cells
 
         # Set up simulation parameters for diffusion system
         if self.diffsystem is not None:
@@ -186,7 +189,7 @@ class Simulator:
     def add_handlers(self, handlers: list[Handler]):
         """Add multiple handlers to the simulation."""
         # always include a stop handler
-        stop_handler = StopHandler()
+        stop_handler = StopHandler(max_cells=self.max_cells)
         # Initialize the stop handler with the same parameters as other handlers
         stop_handler.setup(
             self.get_cells_func(),

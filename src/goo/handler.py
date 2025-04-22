@@ -64,13 +64,14 @@ class Handler(ABC):
     
     
 class StopHandler(Handler):
-    """Handler for stopping the simulation at the end of the simulation time."""
+    """Handler for stopping the simulation at the end of the simulation time or when reaching max cells."""
 
-    def __init__(self):
+    def __init__(self, max_cells: Optional[int] = None):
         super().__init__()
         self.get_cells = None
         self.get_diffsystem = None
         self.dt = None
+        self.max_cells = max_cells
 
     def setup(
         self,
@@ -94,30 +95,39 @@ class StopHandler(Handler):
             print("Warning: StopHandler not properly initialized. Call setup() first.")
             return
 
-
         for cell in self.get_cells():
             cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
 
-        # Check if the current frame is the last frame
+        cell_count = len(self.get_cells())
+        frame_str = f"Calculating frame {scene.frame_current}"
+        total_length = len(frame_str) + 8
+        border_line = "=" * total_length
+
+        print(border_line)
+        print(f"=== {frame_str} ===")
+        print(border_line)
+        print(f"Number of cells: {cell_count}")
+
+        # Check if we've reached either the time limit or cell limit
+        should_stop = False
+        stop_reason = ""
+        
         if scene.frame_current >= bpy.context.scene.frame_end:
-            print(f"Simulation has reached the last frame: {scene.frame_current}. \
-                  Stopping.")
-            # bpy.app.handlers.frame_change_post.remove(self.run)
-            bpy.ops.screen.animation_cancel(restore_frame=True) 
+            should_stop = True
+            stop_reason = f"Simulation has reached the last frame: {scene.frame_current}"
+        
+        if self.max_cells is not None and cell_count >= self.max_cells:
+            should_stop = True
+            stop_reason = f"Simulation has reached maximum number of cells: {cell_count}"
+
+        if should_stop:
+            print(f"{stop_reason}. Stopping.")
+            bpy.ops.screen.animation_cancel(restore_frame=True)
             for cell in self.get_cells():
                 # freeze tissue at end of simulation
                 cell.disable_physics()
                 cell.remesh()
-        else:
-            frame_str = f"Calculating frame {scene.frame_current}"
-            total_length = len(frame_str) + 8
-            border_line = "=" * total_length
-            cell_count = len(self.get_cells())
 
-            print(border_line)
-            print(f"=== {frame_str} ===")
-            print(border_line)
-            print(f"Number of cells: {cell_count}")
 
 class RemeshHandler(Handler):
     """Handler for remeshing cells at given frequencies.
