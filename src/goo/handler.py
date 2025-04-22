@@ -96,7 +96,9 @@ class StopHandler(Handler):
             return
 
         for cell in self.get_cells():
-            cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
+            # Only update point cache if the cell has a valid cloth modifier
+            if hasattr(cell, 'cloth_mod') and cell.cloth_mod is not None:
+                cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
 
         cell_count = len(self.get_cells())
         frame_str = f"Calculating frame {scene.frame_current}"
@@ -122,11 +124,25 @@ class StopHandler(Handler):
 
         if should_stop:
             print(f"{stop_reason}. Stopping.")
-            bpy.ops.screen.animation_cancel(restore_frame=True)
+            
+            # Handle stopping differently based on whether we're rendering or simulating
+            if bpy.context.space_data and bpy.context.space_data.type == 'VIEW_3D':
+                # We're in the viewport, can use animation_cancel
+                bpy.ops.screen.animation_cancel(restore_frame=True)
+            else:
+                # We're rendering, set the frame end to current frame
+                bpy.context.scene.frame_end = scene.frame_current
+            
+            # Freeze all cells
             for cell in self.get_cells():
-                # freeze tissue at end of simulation
-                cell.disable_physics()
-                cell.remesh()
+                # Only try to disable physics and remesh if the cell has physics enabled
+                if hasattr(cell, 'physics_enabled') and cell.physics_enabled:
+                    cell.disable_physics()
+                    cell.remesh()
+            
+            # Remove all handlers to prevent further processing
+            bpy.app.handlers.frame_change_pre.clear()
+            bpy.app.handlers.frame_change_post.clear()
 
 
 class RemeshHandler(Handler):
