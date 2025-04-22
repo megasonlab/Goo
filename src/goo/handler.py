@@ -94,6 +94,10 @@ class StopHandler(Handler):
             print("Warning: StopHandler not properly initialized. Call setup() first.")
             return
 
+
+        for cell in self.get_cells():
+            cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
+
         # Check if the current frame is the last frame
         if scene.frame_current >= bpy.context.scene.frame_end:
             print(f"Simulation has reached the last frame: {scene.frame_current}. \
@@ -137,7 +141,7 @@ class RemeshHandler(Handler):
         if scene.frame_current % self.freq != 0:
             return
         for cell in self.get_cells():
-            if not cell.physics_enabled:
+            if not cell.physics_enabled or cell.is_collapsed():
                 continue
 
             # Update mesh and disable physics
@@ -239,7 +243,7 @@ class RecenterHandler(Handler):
                 cell.move()
             
             # Update cloth modifier if it exists
-            if hasattr(cell, 'cloth_mod') and cell.cloth_mod and hasattr(cell.cloth_mod, 'point_cache'):
+            if hasattr(cell, 'cloth_mod') and cell.cloth_mod:
                 cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
 
 
@@ -548,6 +552,15 @@ def _shape_features(cells: list[Cell]) -> tuple[float, float, float, float]:
     sav_ratios = []
 
     for cell in cells:
+        if cell.is_collapsed():
+            print(f"Deleting collapsed cell: {cell.name}")
+            # Delete motion force if it exists
+            if hasattr(cell, 'motion_force') and cell.motion_force:
+                bpy.data.objects.remove(cell.motion_force.obj, do_unlink=True)
+            # Delete the cell
+            bpy.data.objects.remove(cell.obj, do_unlink=True)
+            continue
+            
         aspect_ratio = cell.aspect_ratio()
         sphericity = cell.sphericity()
         compactness = cell.compactness()

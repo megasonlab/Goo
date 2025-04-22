@@ -306,39 +306,6 @@ class Cell(BlenderObject):
             print(f"Warning: Error checking if cell {self.name} is collapsed: {str(e)}")
             return True
 
-    def attempt_recovery(self) -> bool:
-        """Attempts to recover a collapsed cell by remeshing and recentering.
-        
-        Returns:
-            bool: True if recovery was successful, False otherwise
-        """
-        try:
-            if not self.is_collapsed():
-                return True
-                
-            print(f"Attempting to recover collapsed cell {self.name}")
-            
-            # Store current location
-            current_loc = self.loc
-            
-            # Try to remesh with a smaller voxel size for better detail
-            self.remesh(voxel_size=0.5)
-            
-            # Recenter the cell
-            self.recenter()
-            
-            # Verify recovery
-            if not self.is_collapsed():
-                print(f"Successfully recovered cell {self.name}")
-                return True
-                
-            print(f"Failed to recover cell {self.name}")
-            return False
-            
-        except Exception as e:
-            print(f"Error during recovery of cell {self.name}: {str(e)}")
-            return False
-
     def recenter(self, origin=True, forces=True):
         """Recenter cell origin to center of mass of cell, 
         and center forces to that same origin."""
@@ -448,6 +415,8 @@ class Cell(BlenderObject):
 
         # ensure cloth mod is set correctly
         self._update_cloth()
+        if self.cloth_mod:
+            self.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
 
         for force in self.adhesion_forces:
             force.enable()
@@ -843,10 +812,16 @@ def declare_settings(mod: bpy.types.bpy_struct, settings: dict, path="mod"):
                         expected_len = prop.array_length
                         if len(setting) == expected_len:
                             try:
-                                coerced = tuple(float(x) for x in setting)
+                                # For vector properties, ensure we have the right type
+                                if prop.type == 'FLOAT' and prop.subtype == 'XYZ':
+                                    # For XYZ vectors, use Vector type
+                                    coerced = Vector(setting)
+                                else:
+                                    # For other array types, use tuple
+                                    coerced = tuple(float(x) for x in setting)
                                 setattr(mod, id, coerced)
                             except Exception as e:
-                                print(f"Warning: Could not coerce {path}.{id} to float tuple: {e}")
+                                print(f"Warning: Could not coerce {path}.{id} to appropriate type: {e}")
                         else:
                             print(f"Warning: {path}.{id} expected length {expected_len}, got {len(setting)}")
                     else:
@@ -1071,6 +1046,8 @@ class CellPattern:
         )
         if physics_constructor is not None:
             physics_constructor(self._cell)
+            if hasattr(self._cell, 'cloth_mod') and self._cell.cloth_mod:
+                self._cell.cloth_mod.point_cache.frame_end = bpy.context.scene.frame_end
             self._cell.enable_physics()
 
     def build_forces(

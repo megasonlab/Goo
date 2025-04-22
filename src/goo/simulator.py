@@ -68,6 +68,9 @@ class Simulator:
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = self.time
         
+        # Extend scene to handle physics beyond 250 frames
+        self.extend_scene()
+        
         # Configure Blender's logging to filter dependency messages
         bpy.app.debug_depsgraph = False
         bpy.app.debug_wm = False
@@ -117,9 +120,6 @@ class Simulator:
         # # set film to transparent to hide background
         bpy.context.scene.render.film_transparent = True
 
-        # Allow cloth physics pass 250 frames
-        self.extend_scene()
-
     def enable_addon(self, addon):
         """Enable an addon in Blender."""
         try:
@@ -164,9 +164,9 @@ class Simulator:
         """Extend the scene to allow cloth physics to pass the default 250 frames."""
         cells = self.get_cells()
         for cell in cells:
-            if hasattr(cell, 'cloth_mod') and cell.cloth_mod and hasattr(cell.cloth_mod, 'point_cache'):
-                if cell.cloth_mod.point_cache.frame_end < self.time:
-                    cell.cloth_mod.point_cache.frame_end = self.time
+            if hasattr(cell, 'cloth_mod') and cell.cloth_mod:
+                # Update the point cache frame end
+                cell.cloth_mod.point_cache.frame_end = self.time
 
     def add_handler(
         self,
