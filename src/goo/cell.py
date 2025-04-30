@@ -1,15 +1,21 @@
-from typing_extensions import Optional
+from typing import ClassVar
 
-import numpy as np
+import bmesh
 import bpy
-from mathutils import Vector
-from bpy.types import ClothModifier, CollisionModifier
+import numpy as np
 
-from .utils import *
+from bpy.types import ClothModifier, CollisionModifier
+from mathutils import Vector
+
 from .force import *
+from .gene import (
+    Circuit,
+    Gene,
+    GeneRegulatoryNetwork as GRN,
+)
 from .growth import *
-from .gene import GeneRegulatoryNetwork as GRN, Gene, Circuit
-from .molecule import DiffusionSystem, Molecule
+from .molecule import DiffusionSystem
+from .utils import *
 
 
 class Cell(BlenderObject):
@@ -201,7 +207,7 @@ class Cell(BlenderObject):
             extreme projections along this vector.
         """
         verts = self.vertices()
-        
+
         if len(verts) < 2:
             # If not enough vertices, return a default axis
             default_axis = Vector((1, 0, 0) if n == 0 else (0, 1, 0) if n == 1 else (0, 0, 1))
@@ -273,17 +279,17 @@ class Cell(BlenderObject):
                 matrix_world = self.obj_eval.matrix_world
                 return [matrix_world @ v.co for v in verts]
         except (AttributeError, RuntimeError) as e:
-            print(f"Warning: Error accessing vertices for cell {self.name}: {str(e)}")
+            print(f"Warning: Error accessing vertices for cell {self.name}: {e!s}")
             return []
 
     def is_collapsed(self) -> bool:
         """Checks if the cell has collapsed or is in an invalid state.
-        
+
         A cell is considered collapsed if:
         1. It has no vertices
         2. Its volume is zero or negative
         3. Its mesh is invalid
-        
+
         Returns:
             bool: True if the cell is collapsed, False otherwise
         """
@@ -291,23 +297,23 @@ class Cell(BlenderObject):
             # Check for zero vertices
             if len(self.vertices()) == 0:
                 return True
-                
+
             # Check for invalid volume
             volume = self.volume()
             if volume <= 0:
                 return True
-                
+
             # Check for invalid mesh
             if not self.obj_eval or not self.obj_eval.data or not self.obj_eval.data.vertices:
                 return True
-                
+
             return False
         except Exception as e:
-            print(f"Warning: Error checking if cell {self.name} is collapsed: {str(e)}")
+            print(f"Warning: Error checking if cell {self.name} is collapsed: {e!s}")
             return True
 
     def recenter(self, origin=True, forces=True):
-        """Recenter cell origin to center of mass of cell, 
+        """Recenter cell origin to center of mass of cell,
         and center forces to that same origin."""
         com = self.COM()
 
@@ -379,7 +385,7 @@ class Cell(BlenderObject):
             new_mat = self.mat.copy()  # Duplicate the material
             new_mat.name = f"{self.name}_mat"  # Give it a unique name
             self.obj.data.materials[0] = new_mat  # Assign the new material to the cell
-        
+
         # Apply the color
         r, g, b = color
         a = 1.0  # Ensure full opacity
@@ -455,7 +461,7 @@ class Cell(BlenderObject):
         if self.cloth_mod and self.effectors:
             self.cloth_mod.settings.effector_weights.collection = self.effectors.col
 
-    def get_modifier(self, type) -> Optional[bpy.types.Modifier]:
+    def get_modifier(self, type) -> bpy.types.Modifier | None:
         """Retrieves the first modifier of the specified type from the
         underlying object representation of the cell.
 
@@ -468,12 +474,12 @@ class Cell(BlenderObject):
         return next((m for m in self.obj.modifiers if m.type == type), None)
 
     @property
-    def cloth_mod(self) -> Optional[ClothModifier]:
+    def cloth_mod(self) -> ClothModifier | None:
         """The cloth modifier of the cell if it exists, otherwise None."""
         return self.get_modifier("CLOTH")
 
     @property
-    def collision_mod(self) -> Optional[CollisionModifier]:
+    def collision_mod(self) -> CollisionModifier | None:
         """The collision modifier of the cell if it exists, otherwise None."""
         return self.get_modifier("COLLISION")
 
@@ -521,7 +527,7 @@ class Cell(BlenderObject):
 
     def add_force(self, force: Force):
         """Add a force that affects this cell.
-        
+
         Args:
             force: The force to add.
         """
@@ -540,7 +546,7 @@ class Cell(BlenderObject):
 
         return mother, daughter
 
-    def move(self, direction: tuple = None, strength=None):
+    def move(self, direction: tuple | None = None, strength=None):
         """Set move location. If direction is not specified, then use previous
         direction as reference.
         """
@@ -568,7 +574,7 @@ class Cell(BlenderObject):
             self.pressure = new_pressure
 
     def step_grn(self, diffsys: DiffusionSystem = None, dt=1):
-        """Calculate and update the metabolite concentrations 
+        """Calculate and update the metabolite concentrations
         of the gene regulatory network after 1 time step."""
         com = self.COM()
         radius = self.radius()
@@ -597,7 +603,7 @@ class Cell(BlenderObject):
         """
         if property == "motion_direction":
             hook = create_direction_updater(self, gene)
-        if property == "motion_strength": 
+        if property == "motion_strength":
             hook = create_motion_strength_updater(self, gene)
         else:
             hook = create_scalar_updater(self, gene, property, "linear", gscale, pscale)
@@ -621,7 +627,7 @@ class PropertyUpdater:
         getter: The getter function.
         transformer: The transformer function.
         setter: The setter function.
-        
+
     Attributes:
         getter: A function that retrieves the gene value from a diffusion system.
         transformer: A function that transforms the gene value into a property value.
@@ -656,7 +662,7 @@ def create_scalar_updater(
         relationship: The relationship between the gene and the property.
         gscale: The scale of the gene values.
         pscale: The scale of the property values.
-    
+
     Returns:
         A PropertyUpdater object that can be used to update the property.
     """
@@ -702,7 +708,7 @@ def create_direction_updater(
     gene: Gene,
 ):
     """Create a direction updater that links a gene to the direction of a cell.
-    
+
     Args:
         cell: The cell object.
         gene: The gene that is linked to the direction.
@@ -725,28 +731,28 @@ def create_direction_updater(
 
 
 def create_motion_strength_updater(
-        cell: Cell, 
+        cell: Cell,
         gene: Gene,
         gscale=(0.5, 2),
         pscale=(0, 1),
-): 
-    """Create a motion strength updater that links a gene to 
+):
+    """Create a motion strength updater that links a gene to
     the motion strength of a cell.
-    
+
     Args:
         cell: The cell object.
         gene: The gene that is linked to the motion strength.
         gscale: The scale of the gene values.
         pscale: The scale of the motion strength values.
-    
+
     Returns:
         A PropertyUpdater object that can be used to update the motion strength.
     """
-    
+
     gmin, gmax = gscale
     pmin, pmax = pscale
 
-    def gene_conc_getter(diffsys: DiffusionSystem): 
+    def gene_conc_getter(diffsys: DiffusionSystem):
         """Get the gene concentration from the cell's gene regulatory network."""
         gene_conc = cell.grn.concs.get(gene)
         normalized_gene_conc = linear_transformer(gene_conc)
@@ -759,7 +765,7 @@ def create_motion_strength_updater(
         if gene_value >= gmax:
             return pmax
         return (gene_value - gmin) / (gmax - gmin) * (pmax - pmin) + pmin
-        
+
     def weighted_motion_strength(gene_conc):
         """Calculate the weighted motion strength of the cell based on the gene value."""
         motion_strength = (gene_conc * cell.motion_force.init_strength)
@@ -770,8 +776,8 @@ def create_motion_strength_updater(
         cell.celltype.motion_strength = motion_strength
 
     return PropertyUpdater(
-        gene_conc_getter, 
-        weighted_motion_strength, 
+        gene_conc_getter,
+        weighted_motion_strength,
         set_motion_strength
         )
 
@@ -808,7 +814,7 @@ def declare_settings(mod: bpy.types.bpy_struct, settings: dict, path="mod"):
             else:
                 prop = mod.bl_rna.properties.get(id)
                 if prop is not None:
-                    if hasattr(prop, 'array_length') and isinstance(setting, (list, tuple)):
+                    if hasattr(prop, 'array_length') and isinstance(setting, list | tuple):
                         expected_len = prop.array_length
                         if len(setting) == expected_len:
                             try:
@@ -870,7 +876,7 @@ class CellType:
 
         if type(pattern) is str:
             match pattern:
-                case "standard": 
+                case "standard":
                     self.pattern = StandardPattern()
                 case "simple":
                     self.pattern = SimplePattern()
@@ -900,22 +906,19 @@ class CellType:
             CellType._default_celltype = CellType("default")
         return CellType._default_celltype
 
-    # TODO: perhaps create better way of dealing with setting hierarchy
-    # (pattern > CellType initialization > create_cell)
-    # Moving options that can be set later (i.e. color, growth_rate) solely into Cell
     def create_cell(
         self,
         name,
         loc,
-        color: tuple = None,
+        color: tuple | None = None,
         physics_enabled: bool = True,
         physics_constructor: PhysicsConstructor = None,
         growth_enabled: bool = True,
         growth_type: GrowthType = GrowthType.LINEAR,
         growth_rate: float = 1,
-        target_volume: float = None,
+        target_volume: float | None = None,
         genes_enabled: bool = True,
-        circuits: list[Circuit] = None,
+        circuits: list[Circuit] | None = None,
         metabolites: dict[str, float] = {},
         obj: bpy.types.Object = None,
         **mesh_kwargs,
@@ -980,22 +983,21 @@ class CellPattern:
     """Builders of different cell parts. The CellType class takes these
     patterns in order to create new cells."""
 
-    mesh_kwargs = {}
-    color = None
-    physics_constructor = None
-
-    circuits = []
-    metabolites = {}
-    initial_pressure = None
+    mesh_kwargs: ClassVar[dict] = {}
+    color: ClassVar[tuple | None] = None
+    physics_constructor: ClassVar[PhysicsConstructor | None] = None
+    initial_pressure: ClassVar[float | None] = None
 
     def __init__(self):
         self.reset()
+        self.circuits = []
+        self.metabolites = {}
 
     def reset(self):
         self._cell = Cell()
 
     def retrieve_cell(self):
-        """Retrieves constructed cell, links cell to the scene, 
+        """Retrieves constructed cell, links cell to the scene,
         and resets the director.
         """
         # Link cell to scene
@@ -1103,8 +1105,8 @@ class CellPattern:
         self._cell.growth_controller = controller
 
     def build_network(self, circuits=None, metabolites=None):
-        circuits = self._override(self.__class__.circuits, circuits)
-        metabolites = self._override(self.__class__.metabolites, metabolites)
+        circuits = [] if circuits is None else list(circuits)
+        metabolites = {} if metabolites is None else dict(metabolites)
 
         grn = GRN()
         grn.load_circuits(*circuits)
@@ -1113,37 +1115,37 @@ class CellPattern:
 
 
 class StandardPattern(CellPattern):
-    mesh_kwargs = {}
-    physics_constructor = PhysicsConstructor(
+    mesh_kwargs: ClassVar[dict] = {}
+    physics_constructor: ClassVar[PhysicsConstructor] = PhysicsConstructor(
         SubsurfConstructor,
         ClothConstructor,
         CollisionConstructor,
         RemeshConstructor,
     )
-    color = (0.007, 0.021, 0.3)
-    initial_pressure = 12
+    color: ClassVar[tuple[float, float, float]] = (0.007, 0.021, 0.3)
+    initial_pressure: ClassVar[float] = 12
 
 
 class SimplePattern(CellPattern):
     """A cell type that is reduced in complexity for faster rendering."""
 
-    color = None
-    physics_constructor = PhysicsConstructor(
+    mesh_kwargs: ClassVar[dict] = {}
+    physics_constructor: ClassVar[PhysicsConstructor] = PhysicsConstructor(
         SimpleClothConstructor,
         CollisionConstructor,
     )
-    color = (0.5, 0.5, 0.5)
+    color: ClassVar[tuple[float, float, float]] = (0.5, 0.5, 0.5)
 
 
 class YolkPattern(CellPattern):
     """A larger cell type used for modeling embryonic yolks."""
 
-    mesh_kwargs = {
+    mesh_kwargs: ClassVar[dict] = {
         "size": 10,
         "subdivisions": 4,
     }
-    physics_constructor = PhysicsConstructor(
+    physics_constructor: ClassVar[PhysicsConstructor] = PhysicsConstructor(
         YolkClothConstructor,
         CollisionConstructor,
     )
-    color = (0.64, 0.64, 0.64)
+    color: ClassVar[tuple[float, float, float]] = (0.64, 0.64, 0.64)

@@ -1,13 +1,15 @@
-import sys
 import os
-import numpy as np
-import bpy
-from enum import Enum
-from typing import Union, List, Optional
+import sys
 
-from goo.handler import Handler, StopHandler
+from enum import Enum
+
+import bpy
+import numpy as np
+
 from goo.cell import Cell, CellType
+from goo.handler import Handler, StopHandler
 from goo.molecule import DiffusionSystem
+
 
 Render = Enum("Render", ["PNG", "TIFF", "MP4"])
 
@@ -27,12 +29,12 @@ class Simulator:
     # TODO: determine diffsystem or diffsystems
     def __init__(
         self,
-        celltypes: List[Union[CellType, Cell]] = [],
+        celltypes: list[CellType | Cell] = [],
         diffsystems: DiffusionSystem = [],
         time: int = 250,
         physics_dt: int = 1,
         molecular_dt: int = 1,
-        max_cells: Optional[int] = None,
+        max_cells: int | None = None,
     ):
         self.celltypes = celltypes
         # takes first possible diffsystem
@@ -171,7 +173,7 @@ class Simulator:
     def add_handler(
         self,
         handler: Handler,
-        celltypes: list[CellType] = None,
+        celltypes: list[CellType] | None = None,
         diffsystem: DiffusionSystem = None,
     ):
         """Add a handler to the simulation."""
@@ -200,8 +202,8 @@ class Simulator:
 
     def render(
         self,
-        frames: Optional[Union[List[int], range]] = None,
-        path: str = None,
+        frames: list[int] | range | None = None,
+        path: str | None = None,
         camera=False,
         format: Render = Render.PNG,
     ):

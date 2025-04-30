@@ -1,16 +1,17 @@
 from dataclasses import dataclass
-from typing_extensions import override
 
 import antimony
 import roadrunner
+
 from mathutils import Vector
+from typing_extensions import override
 
 from .molecule import DiffusionSystem
 
 
 class Gene:
     """Gene class to represent a gene in the gene regulatory network.
-    
+
     Args:
         name: Name of the gene.
     """
@@ -40,7 +41,7 @@ class DegFirstOrder(Circuit):
 
 @dataclass
 class ProdAnd(Circuit):
-    """d[z]/dt = k([x] AND [y]), optional substrate s consumed, 
+    """d[z]/dt = k([x] AND [y]), optional substrate s consumed,
     and optional leaky factor a0."""
 
     z: Gene
@@ -55,7 +56,7 @@ class ProdAnd(Circuit):
 
 @dataclass
 class ProdActivation(Circuit):
-    """d[y]/dt = kcat * [x]**n / (Km + [x]**n), optional substrate s consumed, 
+    """d[y]/dt = kcat * [x]**n / (Km + [x]**n), optional substrate s consumed,
     and optional leaky factor a0."""
 
     y: Gene
@@ -69,7 +70,7 @@ class ProdActivation(Circuit):
 
 @dataclass
 class ProdRepression(Circuit):
-    """d[y]/dt = kcat / (Km + [x]**n), optional substrate s consumed, 
+    """d[y]/dt = kcat / (Km + [x]**n), optional substrate s consumed,
     and optional leaky factor a0."""
 
     y: Gene
@@ -104,7 +105,7 @@ class CircuitEngine:
 
 class RoadRunnerEngine(CircuitEngine):
     """Engine to simulate gene regulatory networks using RoadRunner.
-    
+
     Args:
         model: Model of the gene regulatory network.
         result: Result of the simulation.
@@ -149,9 +150,9 @@ class RoadRunnerEngine(CircuitEngine):
 
     @override
     def step(
-        self, 
-        metabolite_concs: dict[Gene, float], 
-        iter: int = 5, 
+        self,
+        metabolite_concs: dict[Gene, float],
+        iter: int = 5,
         dt: float = 1
     ) -> None:
         """Calculates new gene concentrations."""
@@ -162,7 +163,7 @@ class RoadRunnerEngine(CircuitEngine):
         # Replacement of Tellurium with lower-level functions
         antimony.clearPreviousLoads()
         antimony.freeAll()
-        code = antimony.loadAntimonyString(model_full)
+        code = antimony.loadAntimonyString(model_full)  # noqa: F841
         mid = antimony.getMainModuleName()
         rr = roadrunner.RoadRunner(antimony.getSBMLString(mid))
 
@@ -170,7 +171,7 @@ class RoadRunnerEngine(CircuitEngine):
         self.result = result
 
     def _get_model_full(self, metabolite_concs: dict[Gene, float]) -> str:
-        """Encodes the entire model, including metabolites, 
+        """Encodes the entire model, including metabolites,
         into a string representation to be fed into the Roadrunner solver."""
         prefix = "model cell"
         suffix = "end"
@@ -187,8 +188,8 @@ class RoadRunnerEngine(CircuitEngine):
         """Get current gene concentrations."""
         if self.result is None:
             return {}
-        colnames = map(lambda name: Gene(name[1:-1]), self.result.colnames[1:])
-        new_concs = dict(zip(colnames, self.result[-1][1:]))
+        colnames = (Gene(name[1:-1]) for name in self.result.colnames[1:])
+        new_concs = dict(zip(colnames, self.result[-1][1:], strict=False))
         return new_concs
 
 
@@ -222,10 +223,10 @@ class GeneRegulatoryNetwork:
         self,
         diffusion_system: DiffusionSystem = None,
         center: Vector = None,
-        radius: float = None,
+        radius: float | None = None,
         dt=1,
     ):
-        """Update network concentrations based on underlying diffusion systems, 
+        """Update network concentrations based on underlying diffusion systems,
         cell center and radius."""
         if diffusion_system is not None:
             if center is None or radius is None:
@@ -243,9 +244,9 @@ class GeneRegulatoryNetwork:
         self.concs.update(new_concs)
 
     def update_signaling_concs(
-        self, 
-        diffusion_system: DiffusionSystem, 
-        center: Vector, 
+        self,
+        diffusion_system: DiffusionSystem,
+        center: Vector,
         radius: float
     ):
         """Update network concentrations based on the underlying diffusion system."""

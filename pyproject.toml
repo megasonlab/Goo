@@ -116,6 +116,14 @@ exclude = [
 # Same as Black.
 line-length = 88
 
+# Assume Python 3.10
+target-version = "py310"
+
+[tool.ruff.lint]
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
 # Enable Pyflakes `F` codes by default.
 select = [
     "E",   # pycodestyle errors
@@ -131,31 +139,19 @@ select = [
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
-# Assume Python 3.10
-target-version = "py310"
-
-[tool.ruff.lint]
-# Allow autofix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-unfixable = []
-
 # Exclude a variety of commonly ignored directories.
 ignore = [
     "E402",  # module level import not at top of file (common in Blender scripts)
     "E501",  # line too long (handled by line-length)
-    "W503",  # line break before binary operator (PEP 8 style)
+    "F403",  # star imports
+    "F405",  # undefined names from star imports
+    "B006",  # mutable argument defaults
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]  # Allow longer lines in test files
 
-[tool.ruff.format]
-# Like Black, use double quotes for strings.
-quote-style = "double"
-indent-style = "space"
-line-ending = "auto"
-
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["goo"]
 combine-as-imports = true
 force-single-line = false
@@ -165,8 +161,14 @@ lines-between-types = 1
 order-by-type = true
 split-on-trailing-comma = true
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
 
 [tool.mypy]
 files = "src/**/"
