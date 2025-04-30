@@ -534,8 +534,10 @@ def _contact_areas(cells: list[Cell], threshold=4) -> tuple[dict, dict]:
         threshold: The maximum distance between cells to consider them for contact.
 
     Returns:
-        A list of tuples containing pairwise contact areas and contact ratios.
-            See :func:`_contact_area`.
+        A tuple containing two dictionaries:
+            - First dictionary maps cell names to lists of (contact_cell, area) tuples
+            - Second dictionary maps cell names to lists of (contact_cell, ratio) tuples
+            - For cells with no contacts, a list with a single tuple (None, 0.0) is returned
     """
     coms = [cell.COM() for cell in cells]
     dists = squareform(pdist(coms, "euclidean"))
@@ -545,17 +547,33 @@ def _contact_areas(cells: list[Cell], threshold=4) -> tuple[dict, dict]:
 
     pairs = np.where(mask)
 
+    # Initialize dictionaries with empty lists for all cells
     areas = {cell.name: [] for cell in cells}
     ratios = {cell.name: [] for cell in cells}
+
+    # Update with actual contact values
     for i, j in zip(pairs[0], pairs[1]):
         contact_area_i, contact_area_j, ratio_i, ratio_j = _contact_area(
             cells[i], cells[j]
         )
-        areas[cells[i].name].append((cells[j].name, contact_area_i))
-        areas[cells[j].name].append((cells[i].name, contact_area_j))
-        ratios[cells[i].name].append((cells[j].name, ratio_i))
-        ratios[cells[j].name].append((cells[i].name, ratio_j))
+        # Only add contacts if they have non-zero area
+        if contact_area_i > 0:
+            areas[cells[i].name].append((cells[j].name, contact_area_i))
+        if contact_area_j > 0:
+            areas[cells[j].name].append((cells[i].name, contact_area_j))
+        if ratio_i > 0:
+            ratios[cells[i].name].append((cells[j].name, ratio_i))
+        if ratio_j > 0:
+            ratios[cells[j].name].append((cells[i].name, ratio_j))
 
+    # Add zero values for cells with no contacts
+    for cell in cells:
+        if not areas[cell.name]:
+            areas[cell.name] = [(None, 0.0)]
+        if not ratios[cell.name]:
+            ratios[cell.name] = [(None, 0.0)]
+
+    print(f"Areas: {areas}")
     return areas, ratios
 
 
@@ -787,23 +805,118 @@ class DataExporter(Handler):
         if self.options & DataFlag.CONTACT_AREAS:
             try:
                 areas, ratios = _contact_areas(cells)
-                # If areas or ratios are dictionaries, extract numerical values
-                if isinstance(areas, dict):
-                    areas = np.array(list(areas.values()), dtype=np.float64)
+                
+                # Create a mapping of cell names to indices for efficient storage
+                cell_names = {cell.name: idx for idx, cell in enumerate(cells)}
+                n_cells = len(cell_names)
+                
+                # Initialize arrays for areas and ratios with zeros
+                # Create a full matrix of zeros for all possible cell pairs
+                areas_matrix = np.zeros((n_cells, n_cells), dtype=np.float32)
+                ratios_matrix = np.zeros((n_cells, n_cells), dtype=np.float32)
+                
+                # Process areas if they exist
+                if areas and isinstance(areas, dict):
+                    for cell_name, contacts in areas.items():
+                        if contacts and cell_name in cell_names:
+                            cell1_idx = cell_names[cell_name]
+                            for contact_cell, area in contacts:
+                                if (isinstance(area, (int, float)) and 
+                                    contact_cell in cell_names):
+                                    cell2_idx = cell_names[contact_cell]
+                                    areas_matrix[cell1_idx, cell2_idx] = float(area)
+                                    areas_matrix[cell2_idx, cell1_idx] = float(area)  # Symmetric
+                
+                # Process ratios if they exist
+                if ratios and isinstance(ratios, dict):
+                    for cell_name, contacts in ratios.items():
+                        if contacts and cell_name in cell_names:
+                            cell1_idx = cell_names[cell_name]
+                            for contact_cell, ratio in contacts:
+                                if (isinstance(ratio, (int, float)) and 
+                                    contact_cell in cell_names):
+                                    cell2_idx = cell_names[contact_cell]
+                                    ratios_matrix[cell1_idx, cell2_idx] = float(ratio)
+                                    ratios_matrix[cell2_idx, cell1_idx] = float(ratio)  # Symmetric
+                
+                # Convert to structured arrays with minimal memory footprint
+                # Only store non-zero values to save space
+                areas_data = []
+                ratios_data = []
+                
+                # Get indices of non-zero elements
+                areas_nonzero = np.nonzero(areas_matrix)
+                ratios_nonzero = np.nonzero(ratios_matrix)
+                
+                # Store non-zero values
+                for i, j in zip(*areas_nonzero):
+                    if i < j:  # Only store upper triangle to avoid duplicates
+                        areas_data.append((i, j, areas_matrix[i, j]))
+                
+                for i, j in zip(*ratios_nonzero):
+                    if i < j:  # Only store upper triangle to avoid duplicates
+                        ratios_data.append((i, j, ratios_matrix[i, j]))
+                
+                # Convert to structured arrays
+                if areas_data:
+                    areas = np.array(areas_data, dtype=[
+                        ('cell1_idx', 'i4'),  # 32-bit integer
+                        ('cell2_idx', 'i4'),
+                        ('area', 'f4')        # 32-bit float
+                    ])
                 else:
-                    areas = np.array(areas, dtype=np.float64)
-
-                if isinstance(ratios, dict):
-                    ratios = np.array(list(ratios.values()), dtype=np.float64)
+                    areas = np.array([], dtype=[
+                        ('cell1_idx', 'i4'),
+                        ('cell2_idx', 'i4'),
+                        ('area', 'f4')
+                    ])
+                
+                if ratios_data:
+                    ratios = np.array(ratios_data, dtype=[
+                        ('cell1_idx', 'i4'),
+                        ('cell2_idx', 'i4'),
+                        ('ratio', 'f4')
+                    ])
                 else:
-                    ratios = np.array(ratios, dtype=np.float64)
+                    ratios = np.array([], dtype=[
+                        ('cell1_idx', 'i4'),
+                        ('cell2_idx', 'i4'),
+                        ('ratio', 'f4')
+                    ])
 
                 if self.path:
+                    # Save cell names mapping
+                    frame_group.create_dataset('cell_names', 
+                                             data=np.array(list(cell_names.keys()), 
+                                                         dtype='S50'))
+                    
+                    # Save contact data
                     frame_group.create_dataset('contact_areas', data=areas)
                     frame_group.create_dataset('contact_ratios', data=ratios)
+                    
+                    # Save the full matrices for completeness
+                    frame_group.create_dataset('contact_areas_matrix', data=areas_matrix)
+                    frame_group.create_dataset('contact_ratios_matrix', data=ratios_matrix)
                 else:
-                    frame_out["contact_areas"] = areas.tolist()
-                    frame_out["contact_ratios"] = ratios.tolist()
+                    # For non-file output, convert back to cell names
+                    areas_list = []
+                    for cell1_idx, cell2_idx, area in areas:
+                        areas_list.append({
+                            'cell1': list(cell_names.keys())[cell1_idx],
+                            'cell2': list(cell_names.keys())[cell2_idx],
+                            'area': float(area)
+                        })
+                    
+                    ratios_list = []
+                    for cell1_idx, cell2_idx, ratio in ratios:
+                        ratios_list.append({
+                            'cell1': list(cell_names.keys())[cell1_idx],
+                            'cell2': list(cell_names.keys())[cell2_idx],
+                            'ratio': float(ratio)
+                        })
+                    
+                    frame_out["contact_areas"] = areas_list
+                    frame_out["contact_ratios"] = ratios_list
             except Exception as e:
                 print(f"Error saving contact areas for frame {frame_number}: {e}")
 

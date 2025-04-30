@@ -68,6 +68,7 @@ dev = [
     "pre-commit",
     "hatch",
     "uv",
+    "matplotlib"
 ]
 
 # Documentation tools

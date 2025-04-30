@@ -1,12 +1,9 @@
 import sys
 import os
-import logging
 import numpy as np
 import bpy
-import io
-from enum import Enum, Flag, auto
+from enum import Enum
 from typing import Union, List, Optional
-from contextlib import contextmanager
 
 from goo.handler import Handler, StopHandler
 from goo.cell import Cell, CellType
@@ -70,15 +67,15 @@ class Simulator:
         # Set up simulation time interval
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = self.time
-        
+
         # Extend scene to handle physics beyond 250 frames
         self.extend_scene()
-        
+
         # Configure Blender's logging to filter dependency messages
         bpy.app.debug_depsgraph = False
         bpy.app.debug_wm = False
         bpy.app.debug = False
-        
+
         # Set units to the metric system
         bpy.context.scene.unit_settings.system = "METRIC"
         bpy.context.scene.unit_settings.scale_length = 1e-6
@@ -197,7 +194,7 @@ class Simulator:
             self.physics_dt,
         )
         bpy.app.handlers.frame_change_pre.append(stop_handler.run)
-        
+
         for handler in handlers:
             self.add_handler(handler)
 
@@ -287,7 +284,7 @@ class Simulator:
     def run(self, end=bpy.context.scene.frame_end):
         """
         Run the simulation in the background without
-        updating the 3D Viewport in real time. 
+        updating the 3D Viewport in real time.
 
         Args:
             end (int): End frame. Defaults to the last frame of the scene.

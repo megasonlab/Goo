@@ -155,12 +155,12 @@ def convert_images_to_video(input_folder, output_name, make_mp4=True,
     
     # Save MP4 if requested
     if make_mp4:
-        mp4_file = f"{output_name}.mp4"
+        mp4_file = os.path.join(input_folder, f"{output_name}.mp4")
         save_mp4(frames, mp4_file, mp4_fps, quality)
     
     # Save GIF if requested
     if make_gif:
-        gif_file = f"{output_name}.gif"
+        gif_file = os.path.join(input_folder, f"{output_name}.gif")
         save_gif(frames, gif_file, gif_fps)
 
 
