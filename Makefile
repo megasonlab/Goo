@@ -30,27 +30,33 @@ setup:
 		printf "$(YELLOW)Enter the path to your Blender executable: $(RESET)" >&2; \
 		read blender_path; \
 		if [ -f "$$blender_path" ]; then \
-			printf "BLENDER_PATH := %s\n" "$$blender_path" > .blender_path; \
 			break; \
 		else \
 			printf "$(RED)$(BOLD)Error:$(RESET) Blender executable not found at $$blender_path\n"; \
 			printf "$(YELLOW)Please try again$(RESET)\n"; \
 		fi; \
 	done; \
-	printf "$(YELLOW)Is this Blender 4.0? (y/n): $(RESET)" >&2; \
-	read is_40; \
-	if [ "$$is_40" = "y" ]; then \
-		BLENDER_VERSION=4.0; \
+	printf "$(YELLOW)Detecting Blender version...$(RESET)\n"; \
+	version_info=$$($$blender_path --version | head -n1); \
+	BLENDER_VERSION=$$(echo "$$version_info" | cut -d' ' -f2 | cut -d'.' -f1-2); \
+	PYTHON_VERSION=$$($$blender_path --background --python-expr "import sys; print('{}.{}'.format(sys.version_info.major, sys.version_info.minor))" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+$$' | head -n1); \
+	if [ -z "$$PYTHON_VERSION" ]; then \
+		printf "$(RED)$(BOLD)Error:$(RESET) Could not detect Python version. Using default 3.10\n"; \
 		PYTHON_VERSION=3.10; \
-		BLENDER_TAG=40; \
-	else \
-		BLENDER_VERSION=4.1; \
-		PYTHON_VERSION=3.11; \
-		BLENDER_TAG=45; \
 	fi; \
-	printf "BLENDER_VERSION := %s\n" "$$BLENDER_VERSION" >> .blender_path; \
-	printf "PYTHON_VERSION := %s\n" "$$PYTHON_VERSION" >> .blender_path; \
-	printf "BLENDER_TAG := %s\n" "$$BLENDER_TAG" >> .blender_path; \
+	if [ "$$BLENDER_VERSION" = "4.0" ]; then \
+		BLENDER_TAG=40; \
+	elif [ "$$BLENDER_VERSION" = "4.1" ]; then \
+		BLENDER_TAG=45; \
+	else \
+		BLENDER_TAG=$$(echo "$$BLENDER_VERSION" | tr -d '.'); \
+	fi; \
+	{ \
+		echo "BLENDER_PATH := $$blender_path"; \
+		echo "BLENDER_VERSION := $$BLENDER_VERSION"; \
+		echo "PYTHON_VERSION := $$PYTHON_VERSION"; \
+		echo "BLENDER_TAG := $$BLENDER_TAG"; \
+	} > .blender_path; \
 	$(MAKE) _setup
 
 # Internal setup target that requires BLENDER_PATH
@@ -68,7 +74,7 @@ _setup:
 	@printf "$(CYAN)$(BOLD)=== Goo Setup ===$(RESET)\n"
 	@printf "$(GREEN)✓ Blender executable found$(RESET)\n"
 	@printf "$(GREEN)Detected Blender version:$(RESET) $(BLENDER_VERSION)\n"
-	@printf "$(GREEN)Using Python version:$(RESET) $(PYTHON_VERSION)\n\n"
+	@printf "$(GREEN)Using Python version:$(RESET) $(PYTHON_VERSION)\n"
 	@printf "$(YELLOW)This setup will:$(RESET)\n"
 	@printf "  1. Create a virtual environment\n"
 	@printf "  2. Install dependencies\n"
@@ -80,9 +86,21 @@ _setup:
 # Derive Python path from Blender path
 BLENDER_DIR = $(dir $(BLENDER_PATH))
 ifeq ($(shell uname),Darwin)
-    BPY_PATH = $(BLENDER_DIR)../Resources/$(BLENDER_VERSION)/python/bin/python$(PYTHON_VERSION)
+    # Try multiple possible Python paths for macOS
+    BPY_PATH = $(shell find $(BLENDER_DIR)../Resources/$(BLENDER_VERSION)/python/bin -name "python$(PYTHON_VERSION)*" -type f 2>/dev/null | head -n1)
+    ifeq ($(BPY_PATH),)
+        BPY_PATH = $(shell find $(BLENDER_DIR)../Resources/$(BLENDER_VERSION)/python/bin -name "python*" -type f 2>/dev/null | head -n1)
+    endif
 else
-    BPY_PATH = $(BLENDER_DIR)$(BLENDER_VERSION)/python/bin/python$(PYTHON_VERSION)
+    BPY_PATH = $(shell find $(BLENDER_DIR)$(BLENDER_VERSION)/python/bin -name "python$(PYTHON_VERSION)*" -type f 2>/dev/null | head -n1)
+    ifeq ($(BPY_PATH),)
+        BPY_PATH = $(shell find $(BLENDER_DIR)$(BLENDER_VERSION)/python/bin -name "python*" -type f 2>/dev/null | head -n1)
+    endif
+endif
+
+# Fallback to system Python if Blender Python not found
+ifeq ($(BPY_PATH),)
+    BPY_PATH = python$(PYTHON_VERSION)
 endif
 
 # Do not change these options!
@@ -94,7 +112,7 @@ HOOK_PACKAGES = $(HOOK_DIR)/scripts/modules
 
 TEST_DIR = unit_tests
 
-.PHONY: update_modules clean create_venv install_requirements create_hook test testone install setup_hook all info docs
+.PHONY: update_modules clean create_venv install_requirements create_hook test testone install setup_hook all info docs goo
 
 # --- Use these targets ---
 info:
@@ -144,8 +162,8 @@ update_modules:
 
 clean:
 	@printf "$(YELLOW)$(BOLD)Cleaning up...$(RESET)\n"
-	@rm -rf .blender_venv4.0 .blender_venv4.1
-	@rm -rf hook_blender*
+	@rm -rf .blender_venv .blender_venv*
+	@rm -rf hook_blender* hook
 	@rm -rf temp_install
 	@printf "$(GREEN)Cleanup complete!$(RESET)\n"
 
@@ -186,6 +204,7 @@ create_hook:
 	@printf "$(YELLOW)This will create a hook directory and copy necessary files.$(RESET)\n"
 	@mkdir -p $(HOOK_PACKAGES)
 	@cp -r src/goo $(HOOK_PACKAGES)/
+	@printf "$(YELLOW)Copying dependencies...$(RESET)\n"
 	@cp -a $(VENV_PACKAGES)/. $(HOOK_PACKAGES)/
 	@printf "$(GREEN)✓ Hook setup complete!$(RESET)\n"
 	@printf "$(YELLOW)Registering script directory in Blender...$(RESET)\n"
@@ -203,10 +222,38 @@ help:
 	@printf "  $(YELLOW)docs$(RESET)      - Build documentation using Blender Python\n"
 	@printf "  $(YELLOW)clean$(RESET)     - Clean all generated files\n"
 	@printf "  $(YELLOW)update_modules$(RESET) - Update hook modules\n"
+	@printf "  $(YELLOW)goo$(RESET)       - Update Goo library in Blender and hook directory\n"
 	@printf "\n"
 	@printf "$(GREEN)Usage:$(RESET)\n"
 	@printf "  $(YELLOW)make setup$(RESET)\n"
 	@printf "\n"
 	@printf "$(GREEN)Example:$(RESET)\n"
 	@printf "  $(YELLOW)make setup$(RESET)\n"
+	@printf "  $(YELLOW)make goo$(RESET)   - Update Goo library during development\n"
 	@printf "$(CYAN)$(BOLD)========================$(RESET)\n"
+
+.PHONY: goo
+goo:
+	@printf "$(CYAN)$(BOLD)=== Updating Goo Library ===$(RESET)\n"
+	@if [ -z "$(BLENDER_PATH)" ]; then \
+		printf "$(RED)$(BOLD)Error:$(RESET) Please run 'make setup' first\n"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(BLENDER_PATH)" ]; then \
+		printf "$(RED)$(BOLD)Error:$(RESET) Blender executable not found at $(BLENDER_PATH)\n"; \
+		printf "$(YELLOW)Please run 'make setup' again with the correct path$(RESET)\n"; \
+		exit 1; \
+	fi
+	@printf "$(GREEN)✓ Blender executable found$(RESET)\n"
+	@printf "$(GREEN)Detected Blender version:$(RESET) $(BLENDER_VERSION)\n"
+	@printf "$(GREEN)Using Python version:$(RESET) $(PYTHON_VERSION)\n"
+	@printf "$(YELLOW)This will update the Goo library in the hook directory$(RESET)\n\n"
+	@printf "$(YELLOW)Press Enter to continue or Ctrl+C to cancel...$(RESET)\n"
+	@read
+	
+	@printf "$(CYAN)Copying Goo library to hook directory...$(RESET)\n"
+	@mkdir -p $(HOOK_PACKAGES)/goo
+	@cp -r src/goo/* $(HOOK_PACKAGES)/goo/
+	@printf "$(GREEN)✓ Updated in hook directory$(RESET)\n"
+	
+	@printf "$(GREEN)✓ Goo library updated successfully$(RESET)\n"

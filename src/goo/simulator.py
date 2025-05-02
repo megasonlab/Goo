@@ -1,16 +1,15 @@
-import sys
 import os
-import logging
-import numpy as np
-import bpy
-import io
-from enum import Enum, Flag, auto
-from typing import Union, List, Optional
-from contextlib import contextmanager
+import sys
 
-from goo.handler import Handler, StopHandler
+from enum import Enum
+
+import bpy
+import numpy as np
+
 from goo.cell import Cell, CellType
+from goo.handler import Handler, StopHandler
 from goo.molecule import DiffusionSystem
+
 
 Render = Enum("Render", ["PNG", "TIFF", "MP4"])
 
@@ -23,17 +22,19 @@ class Simulator:
         time (List[int]): Start and end frames.
         physics_dt (int): Time step for physics simulation.
         molecular_dt (int): Time step for molecular simulation.
+        max_cells (Optional[int]): Maximum number of cells to include in the simulation.
 
     """
 
     # TODO: determine diffsystem or diffsystems
     def __init__(
         self,
-        celltypes: List[Union[CellType, Cell]] = [],
+        celltypes: list[CellType | Cell] = [],
         diffsystems: DiffusionSystem = [],
         time: int = 250,
         physics_dt: int = 1,
         molecular_dt: int = 1,
+        max_cells: int | None = None,
     ):
         self.celltypes = celltypes
         # takes first possible diffsystem
@@ -44,6 +45,7 @@ class Simulator:
         self.addons = []  # Removing add_mesh_extra_objects as it's causing issues in 4.5
         self.render_format: Render = Render.PNG
         self.time = time
+        self.max_cells = max_cells
 
         # Set up simulation parameters for diffusion system
         if self.diffsystem is not None:
@@ -67,12 +69,15 @@ class Simulator:
         # Set up simulation time interval
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = self.time
-        
+
+        # Extend scene to handle physics beyond 250 frames
+        self.extend_scene()
+
         # Configure Blender's logging to filter dependency messages
         bpy.app.debug_depsgraph = False
         bpy.app.debug_wm = False
         bpy.app.debug = False
-        
+
         # Set units to the metric system
         bpy.context.scene.unit_settings.system = "METRIC"
         bpy.context.scene.unit_settings.scale_length = 1e-6
@@ -116,9 +121,6 @@ class Simulator:
 
         # # set film to transparent to hide background
         bpy.context.scene.render.film_transparent = True
-
-        # Allow cloth physics pass 250 frames
-        self.extend_scene()
 
     def enable_addon(self, addon):
         """Enable an addon in Blender."""
@@ -164,14 +166,14 @@ class Simulator:
         """Extend the scene to allow cloth physics to pass the default 250 frames."""
         cells = self.get_cells()
         for cell in cells:
-            if hasattr(cell, 'cloth_mod') and cell.cloth_mod and hasattr(cell.cloth_mod, 'point_cache'):
-                if cell.cloth_mod.point_cache.frame_end < self.time:
-                    cell.cloth_mod.point_cache.frame_end = self.time
+            if hasattr(cell, 'cloth_mod') and cell.cloth_mod:
+                # Update the point cache frame end
+                cell.cloth_mod.point_cache.frame_end = self.time
 
     def add_handler(
         self,
         handler: Handler,
-        celltypes: list[CellType] = None,
+        celltypes: list[CellType] | None = None,
         diffsystem: DiffusionSystem = None,
     ):
         """Add a handler to the simulation."""
@@ -186,16 +188,22 @@ class Simulator:
     def add_handlers(self, handlers: list[Handler]):
         """Add multiple handlers to the simulation."""
         # always include a stop handler
-        stop_handler = StopHandler()
+        stop_handler = StopHandler(max_cells=self.max_cells)
+        # Initialize the stop handler with the same parameters as other handlers
+        stop_handler.setup(
+            self.get_cells_func(),
+            self.get_diffsystem_func(),
+            self.physics_dt,
+        )
         bpy.app.handlers.frame_change_pre.append(stop_handler.run)
-        
+
         for handler in handlers:
             self.add_handler(handler)
 
     def render(
         self,
-        frames: Optional[Union[List[int], range]] = None,
-        path: str = None,
+        frames: list[int] | range | None = None,
+        path: str | None = None,
         camera=False,
         format: Render = Render.PNG,
     ):
@@ -278,7 +286,7 @@ class Simulator:
     def run(self, end=bpy.context.scene.frame_end):
         """
         Run the simulation in the background without
-        updating the 3D Viewport in real time. 
+        updating the 3D Viewport in real time.
 
         Args:
             end (int): End frame. Defaults to the last frame of the scene.

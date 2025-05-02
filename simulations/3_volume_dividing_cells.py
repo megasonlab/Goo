@@ -19,5 +19,6 @@ sim.add_handlers(
         goo.SizeDivisionHandler(goo.BisectDivisionLogic, mu=60, sigma=2),
         goo.RecenterHandler(),
         goo.RemeshHandler(),
+        goo.ColorizeHandler(goo.Colorizer.RANDOM)
     ]
 )

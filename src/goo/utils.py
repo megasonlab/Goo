@@ -1,10 +1,8 @@
-from functools import reduce
-from typing import Union
-
-import bpy
 import bmesh
-from bpy.types import Modifier, ClothModifier
-from mathutils import *
+import bpy
+
+from bpy.types import ClothModifier, Modifier
+from mathutils import Euler, Matrix, Quaternion
 
 
 class BlenderObject:
@@ -31,7 +29,7 @@ class BlenderObject:
         self.obj.hide_set(True)
 
     # ----- CUSTOM PROPERTIES -----
-    def __setitem__(self, k: str, v: Union[float, list[float], int, list[int], str]):
+    def __setitem__(self, k: str, v: float | list[float] | int | list[int] | str):
         self.obj[k] = v
 
     def __contains__(self, k: str):
@@ -255,8 +253,8 @@ class YolkClothConstructor(ClothConstructor):
         mod.collision_settings.use_self_collision = True
         mod.collision_settings.self_friction = 0
         mod.collision_settings.friction = 0
-        mod.collision_settings.self_distance_min = 0.005
-        mod.collision_settings.distance_min = 0.005
+        mod.collision_settings.self_distance_min = 0.075
+        mod.collision_settings.distance_min = 0.075
         mod.collision_settings.self_impulse_clamp = 0
 
 
@@ -275,7 +273,7 @@ class CollisionConstructor(ModConstructor):
 
 class BoundaryCollisionConstructor(CollisionConstructor):
     def setup_mod(self, mod: bpy.types.CollisionModifier):
-        super(BoundaryCollisionConstructor, self).setup_mod(mod)
+        super().setup_mod(mod)
         mod.settings.use_culling = False
 
 

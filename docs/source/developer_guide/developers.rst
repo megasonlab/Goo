@@ -116,6 +116,7 @@ Useful Commands
 - ``make update_modules``: Update Blender hook modules
 - ``make setup``: Initial setup or reconfiguration
 - ``make test``: Run test suite
+- ``make goo``: Update Goo library in both Blender's Python path and hook directory (useful during development)
 
 For a complete list of available commands, run:
 
