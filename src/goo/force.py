@@ -279,7 +279,7 @@ class ForceCollection:
     def name(self, n):
         self.col.name = n
 
-    def add(self, force: Union[Force, "ForceCollection"]):
+    def add(self, force: Force | "ForceCollection"):
         """Add a Force or Force Collection to the collection."""
         self.children.append(force)
         if isinstance(force, Force):
@@ -287,7 +287,7 @@ class ForceCollection:
         elif isinstance(force, ForceCollection):
             self.col.children.link(force.col)
 
-    def remove(self, force: Union[Force, "ForceCollection"]):
+    def remove(self, force: Force | "ForceCollection"):
         """Remove a Force or Force Collection from the collection."""
         self.children.remove(force)
         if isinstance(force, Force):
