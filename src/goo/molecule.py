@@ -17,15 +17,15 @@ class Molecule:
     """
 
     def __init__(
-        self, name: str, conc: float, D: float, gradient: str | None = None
+        self, name: str, molecule_conc: float, D: float, gradient: str | None = None
     ):
         self.name = name
         self.D = D
-        self.conc = conc
+        self.molecule_conc = molecule_conc
         self.gradient = gradient
 
     def __repr__(self):
-        str = f"Molecule(concentration={self.conc}" f"diffusion_rate={self.D})"
+        str = f"Molecule(concentration={self.molecule_conc}" f"diffusion_rate={self.D})"
         return str
 
     def __str__(self):
@@ -140,33 +140,50 @@ class DiffusionSystem:
         return self._kd_tree
 
     def _nearest_idx(self, point):
-        """Get the nearest grid index for the given point."""
+        """Get the nearest voxel index for the given point."""
         return self._kd_tree.query(point)[1]
 
-    def update_concentration(self, mol, point, value):
-        """Add molecule value to a certain point at a given voxel in the grid."""
+    def update_molecule_concentration(self, mol, point, value):
+        """Add a value to a molecule concentration
+        at a certain point that is converted to the nearesrt voxel in the grid."""
         # Convert flat index to 3D index
         idx = self._nearest_idx(point)
         self._grid_concentrations[mol].ravel()[idx] += value
 
-    def get_concentration(self, mol, point):
+    def get_molecule_concentration(self, mol, point):
         """Add molecule value to a certain point at a given voxel in the grid."""
         # Convert flat index to 3D index
         idx = self._nearest_idx(point)
         return self._grid_concentrations[mol].ravel()[idx]
 
     def get_ball_concentrations(self, center, radius):
-        """Get concentrations of all molecules in a sphere
-        with given center and radius."""
+        """Returns total concentrations of each molecule within a sphere.
+
+        Args:
+            center: Coordinates of sphere center
+            radius: Radius of sphere
+
+        Returns:
+            dict: Mapping of molecules to their total concentrations within the sphere
+        """
         idxs = self._kd_tree.query_ball_point(center, radius)
-        signaling_concs = {}
+        molecule_concs = {}
         for mol, grid_concs in self._grid_concentrations.items():
-            signaling_concs[mol] = np.sum(grid_concs.ravel()[idxs])
-        return signaling_concs
+            molecule_concs[mol] = np.sum(grid_concs.ravel()[idxs])
+        return molecule_concs
 
     def get_coords_concentrations(self, mol, center, radius):
-        """Get a list of coordinates and a list of molecule
-        concentration for each coordinate."""
+        """Returns the coordinates and concentrations of a molecule
+        of all the voxels within a sphere.
+
+        Args:
+            mol: Molecule to get concentrations for
+            center: Coordinates of sphere center
+            radius: Radius of sphere
+
+        Returns:
+            tuple: (coordinates array, concentrations array) for points within sphere
+        """
         idxs = self._kd_tree.query_ball_point(center, radius)
         coords = self._kd_tree.data[idxs]
         concs = self._grid_concentrations[mol].ravel()[idxs]
@@ -190,3 +207,11 @@ class DiffusionSystem:
         num_steps = int(tot_time / t_step)
         for _ in range(num_steps):
             self.diffuse()
+
+    def molecular_sensing(self, cell):
+        """Simulate the sensing of molecular signals by a cell."""
+        pass
+
+    def molecular_secretion(self, cell):
+        """Simulate the secretion of molecular signals by a cell."""
+        pass

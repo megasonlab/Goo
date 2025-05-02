@@ -1,41 +1,30 @@
+from importlib import reload
 import goo
 
+reload(goo)
 goo.reset_modules()
 goo.reset_scene()
 
-# Defining genes
-x = goo.Gene("x")
-y = goo.Gene("y")
-z = goo.Gene("z")
-
-celltype = goo.CellType("cellA", pattern="simple", target_volume=125)
+# Defining cells
+celltype = goo.CellType("cellA", target_volume=70, pattern="simple")
 celltype.homo_adhesion_strength = 500
-celltype.motion_strength = 1000
-cell = celltype.create_cell(name="cell1", loc=(0, 0, 0), color=(0, 0, 0))
+cell = celltype.create_cell(name="cell", loc=(0, 0, 0), color=(0, 1, 1))
 cell.stiffness = 5
 
-network1 = goo.GeneRegulatoryNetwork()
-network1.load_circuits(
-    goo.DegFirstOrder(x, 0.04),
-    goo.DegFirstOrder(y, 0.04),
-    goo.DegFirstOrder(z, 0.04),
-    goo.ProdRepression(y, x, kcat=0.5, n=3),
-    goo.ProdRepression(z, y, kcat=0.5, n=3),
-    goo.ProdRepression(x, z, kcat=0.5, n=3)
-    )
-cell.grn = network1
-cell.metabolites = {x: 2, y: 0.5, z: 0.5}
-cell.link_gene_to_property(gene=x, property="motion_strength")
+mol = goo.Molecule("mol", conc=1, D=1, gradient="linear")
+diffsys = goo.DiffusionSystem(molecules=[mol])
+cell.link_molecule_to_property(mol, "motion_direction")
 
-sim = goo.Simulator(celltypes=[celltype], time=1000, physics_dt=1)
-sim.setup_world(seed=2025)
+sim = goo.Simulator(celltypes=[celltype], time=500, physics_dt=1, diffsystems=[diffsys])
+sim.setup_world()
 sim.add_handlers(
     [
         goo.GrowthPIDHandler(),
-        goo.SizeDivisionHandler(goo.BisectDivisionLogic, mu=125, sigma=3),
+#        goo.SizeDivisionHandler(goo.BisectDivisionLogic, mu=60, sigma=2),
         goo.RecenterHandler(),
-        goo.NetworkHandler(),
-        goo.ColorizeHandler(goo.Colorizer.GENE, x, range=(1, 2)),
-        goo.RandomMotionHandler(goo.ForceDist.GAUSSIAN)
+#        goo.RemeshHandler(),
+        goo.ColorizeHandler(goo.Colorizer.RANDOM),
+        goo.DiffusionHandler(),
+#        goo.DataExporter("/Users/antoine/Harvard/MegasonLab/Goo-1/paper/data/test.h5" , goo.DataFlag.ALL),
     ]
 )

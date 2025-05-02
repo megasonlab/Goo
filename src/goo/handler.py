@@ -224,7 +224,7 @@ class NetworkHandler(Handler):
 
     def run(self, scene, despgraph):
         for cell in self.get_cells():
-            cell.step_grn(self.get_diffsystem())
+            cell.step_grn(dt=self.dt)
 
 
 class RecenterHandler(Handler):
@@ -430,7 +430,7 @@ class ColorizeHandler(Handler):
                     else 0.0 for cell in cells
                 ]),
                 Colorizer.VOLUME: np.array([cell.volume() for cell in cells]),
-                Colorizer.GENE: (np.array([cell.metabolites[self.gene]
+                Colorizer.GENE: (np.array([cell.gene_concs[self.gene]
                                          for cell in cells])
                                 if self.gene else np.array([])),
             }.get(self.colorizer, None)
