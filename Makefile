@@ -247,20 +247,13 @@ goo:
 	@printf "$(GREEN)✓ Blender executable found$(RESET)\n"
 	@printf "$(GREEN)Detected Blender version:$(RESET) $(BLENDER_VERSION)\n"
 	@printf "$(GREEN)Using Python version:$(RESET) $(PYTHON_VERSION)\n"
-	@printf "$(YELLOW)This will update the Goo library in:$(RESET)\n"
-	@printf "  1. Blender's Python path\n"
-	@printf "  2. Hook directory\n\n"
+	@printf "$(YELLOW)This will update the Goo library in the hook directory$(RESET)\n\n"
 	@printf "$(YELLOW)Press Enter to continue or Ctrl+C to cancel...$(RESET)\n"
 	@read
-	
-	@printf "$(CYAN)Copying Goo library to Blender's Python path...$(RESET)\n"
-	@mkdir -p $(BLENDER_DIR)$(BLENDER_VERSION)/scripts/modules/goo
-	@cp -r src/goo/* $(BLENDER_DIR)$(BLENDER_VERSION)/scripts/modules/goo/
-	@printf "$(GREEN)✓ Updated in Blender's Python path$(RESET)\n"
 	
 	@printf "$(CYAN)Copying Goo library to hook directory...$(RESET)\n"
 	@mkdir -p $(HOOK_PACKAGES)/goo
 	@cp -r src/goo/* $(HOOK_PACKAGES)/goo/
 	@printf "$(GREEN)✓ Updated in hook directory$(RESET)\n"
 	
-	@printf "$(GREEN)✓ Goo library updated successfully in all locations$(RESET)\n"
+	@printf "$(GREEN)✓ Goo library updated successfully$(RESET)\n"
