@@ -1,16 +1,16 @@
-from typing import Callable
+from collections.abc import Callable
 
-import bpy
 import bmesh
-from mathutils import Vector
+import bpy
 import numpy as np
 
+from mathutils import Vector
+from typing_extensions import override
+
 from goo.cell import Cell
-from goo.utils import *
 from goo.handler import Handler
 from goo.molecule import DiffusionSystem
-
-from typing_extensions import override
+from goo.utils import *
 
 
 class DivisionLogic:
@@ -218,7 +218,7 @@ class DivisionHandler(Handler):
         get_diffsystems: Callable[[], list[DiffusionSystem]],
         dt: float,
     ):
-        super(DivisionHandler, self).setup(get_cells, get_diffsystems, dt)
+        super().setup(get_cells, get_diffsystems, dt)
         for cell in self.get_cells():
             cell["divided"] = False
         self._cells_to_update = []
@@ -281,11 +281,11 @@ class TimeDivisionHandler(DivisionHandler):
     """
 
     def __init__(self, division_logic, mu=20, sigma=0):
-        super(TimeDivisionHandler, self).__init__(division_logic, mu, sigma)
+        super().__init__(division_logic, mu, sigma)
 
     @override
     def setup(self, get_cells, get_diffsystem, dt):
-        super(TimeDivisionHandler, self).setup(get_cells, get_diffsystem, dt)
+        super().setup(get_cells, get_diffsystem, dt)
         for cell in self.get_cells():
             cell["last_division_time"] = 0
 
@@ -315,17 +315,17 @@ class SizeDivisionHandler(DivisionHandler):
     """
 
     def __init__(self, division_logic, mu=30, sigma=0):
-        super(SizeDivisionHandler, self).__init__(division_logic, mu, sigma)
+        super().__init__(division_logic, mu, sigma)
 
     @override
     def can_divide(self, cell: Cell):
         # time = bpy.context.scene.frame_current * self.dt
         # if "last_division_time" not in cell:
         #     cell["last_division_time"] = time
-            
+
         div_volume = np.random.normal(self.mu, self.sigma)
         return cell.volume() >= div_volume
-    
+
     @override
     def update_on_divide(self, cell: Cell):
         time = bpy.context.scene.frame_current * self.dt

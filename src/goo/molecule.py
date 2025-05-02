@@ -1,10 +1,6 @@
-from typing import Optional, Tuple
-from typing_extensions import override
 import numpy as np
-import math
 
 from scipy.ndimage import laplace
-from scipy.integrate import solve_ivp
 from scipy.spatial import KDTree
 
 from goo.utils import *
@@ -21,7 +17,7 @@ class Molecule:
     """
 
     def __init__(
-        self, name: str, conc: float, D: float, gradient: Optional[str] = None
+        self, name: str, conc: float, D: float, gradient: str | None = None
     ):
         self.name = name
         self.D = D
@@ -58,8 +54,8 @@ class DiffusionSystem:
     def __init__(
         self,
         molecules: list[Molecule],
-        grid_size: Tuple[int, int, int] = (50, 50, 50),
-        grid_center: Tuple[int, int, int] = (0, 0, 0),
+        grid_size: tuple[int, int, int] = (50, 50, 50),
+        grid_center: tuple[int, int, int] = (0, 0, 0),
         time_step: float = 0.1,
         total_time: int = 1,
         element_size=(0.5, 0.5, 0.5),
@@ -79,7 +75,7 @@ class DiffusionSystem:
         xgrid, ygrid, zgrid = self.grid_size
         xlim, ylim, zlim = (np.array(self.grid_size) - 1) / 2 * self.element_size
 
-        # Create x, y, z coordinates centered around 0 
+        # Create x, y, z coordinates centered around 0
         # with specified range and space between grid points.
         x, y, z = np.mgrid[
             -xlim : xlim : complex(xgrid),
@@ -160,7 +156,7 @@ class DiffusionSystem:
         return self._grid_concentrations[mol].ravel()[idx]
 
     def get_ball_concentrations(self, center, radius):
-        """Get concentrations of all molecules in a sphere 
+        """Get concentrations of all molecules in a sphere
         with given center and radius."""
         idxs = self._kd_tree.query_ball_point(center, radius)
         signaling_concs = {}
@@ -169,7 +165,7 @@ class DiffusionSystem:
         return signaling_concs
 
     def get_coords_concentrations(self, mol, center, radius):
-        """Get a list of coordinates and a list of molecule 
+        """Get a list of coordinates and a list of molecule
         concentration for each coordinate."""
         idxs = self._kd_tree.query_ball_point(center, radius)
         coords = self._kd_tree.data[idxs]

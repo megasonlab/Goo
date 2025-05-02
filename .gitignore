@@ -204,3 +204,6 @@ pyrightconfig.json
 scratch/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,macos
+
+# paper
+paper/

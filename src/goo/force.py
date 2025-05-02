@@ -1,8 +1,8 @@
-from typing import Optional
+import bpy
+
+from mathutils import Vector
 from typing_extensions import override
 
-import bpy
-from mathutils import Vector
 from goo.utils import *
 
 
@@ -20,7 +20,7 @@ class Force(BlenderObject):
     """
 
     def __init__(self, obj: bpy.types.Object, type="FORCE"):
-        super(Force, self).__init__(obj)
+        super().__init__(obj)
         self.type = type
 
         # Instantiate force field object
@@ -69,7 +69,7 @@ class Force(BlenderObject):
         return None
 
     @min_dist.setter
-    def min_dist(self, min_dist: Optional[float]):
+    def min_dist(self, min_dist: float | None):
         if min_dist is None:
             self.obj.field.use_min_distance = False
         else:
@@ -84,7 +84,7 @@ class Force(BlenderObject):
         return None
 
     @max_dist.setter
-    def max_dist(self, max_dist: Optional[float]):
+    def max_dist(self, max_dist: float | None):
         if max_dist is None:
             self.obj.field.use_max_distance = False
         else:
@@ -117,7 +117,7 @@ class AdhesionForce(Force):
     """An adhesion force."""
 
     def __init__(self, obj):
-        super(AdhesionForce, self).__init__(obj, "FORCE")
+        super().__init__(obj, "FORCE")
 
     @override
     @property
@@ -133,7 +133,7 @@ class MotionForce(Force):
     """A motion force."""
 
     def __init__(self, obj: bpy.types.Object):
-        super(MotionForce, self).__init__(obj, "FORCE")
+        super().__init__(obj, "FORCE")
         obj.field.shape = "PLANE"
         obj.field.apply_to_rotation = False
         self.init_strength = None
@@ -166,8 +166,8 @@ def create_force(
     strength: int,
     type: str = "FORCE",
     falloff: float = 0,
-    min_dist: float = None,
-    max_dist: float = None,
+    min_dist: float | None = None,
+    max_dist: float | None = None,
     shape: str = "POINT",
 ) -> Force:
     """Creates a new force field.
@@ -201,9 +201,9 @@ def create_force(
 
 def create_adhesion(
     strength: int,
-    obj: Optional[bpy.types.Object] = None,
-    name: str = None,
-    loc: tuple = None,
+    obj: bpy.types.Object | None = None,
+    name: str | None = None,
+    loc: tuple | None = None,
     shape: str = "POINT",
 ) -> AdhesionForce:
     """Creates a new adhesion force.

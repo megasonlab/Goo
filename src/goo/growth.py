@@ -1,5 +1,6 @@
-from enum import Enum
 from copy import copy
+from enum import Enum
+
 
 """Possible types of growth."""
 GrowthType = Enum("Growth", ["LINEAR", "EXPONENTIAL", "LOGISTIC"])
