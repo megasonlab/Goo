@@ -14,6 +14,7 @@ from .gene import (
     GeneRegulatoryNetwork as GRN,
 )
 from .growth import *
+from .molecule import DiffusionSystem, Molecule
 from .utils import *
 
 
@@ -43,7 +44,9 @@ class Cell(BlenderObject):
 
         self.growth_controller: GrowthController = None
         self.grn: GRN = None
-        self.hooks = []
+        self.diffsys: DiffusionSystem = None
+        self.grn_hooks = []
+        self.diffsys_hooks = []
 
         self.just_divided = False
         self.physics_enabled = False
@@ -585,7 +588,7 @@ class Cell(BlenderObject):
         self["genes"] = {str(k): v for k, v in self.gene_concs.items()}
 
         # Update physical attributes
-        for hook in self.hooks:
+        for hook in self.grn_hooks:
             hook()
 
     @property
@@ -597,9 +600,9 @@ class Cell(BlenderObject):
         self["genes"] = {str(k): v for k, v in gene_concs.items()}
         self.grn.gene_concs = gene_concs
 
-    def link_gene_to_property(self, gene, property, gscale=(0, 1), pscale=(0, 1)):
-        """Link gene to property, so that changes in the gene will
-        cause changes in the physical property.
+    def link_gene_to_property(self, gene: Gene, property, gscale=(0, 1), pscale=(0, 1)):
+        """Link gene to property, so that changes in the gene levels
+        will cause changes in the physical property.
         """
         if property == "motion_direction":
             hook = create_direction_updater(self, gene)
@@ -608,7 +611,7 @@ class Cell(BlenderObject):
         else:
             hook = create_scalar_updater(self, gene, property, "linear", gscale, pscale)
 
-        self.hooks.append(hook)
+        self.grn_hooks.append(hook)
 
     def __setitem__(self, name: str, value) -> None:
         self.obj[name] = value
@@ -618,6 +621,59 @@ class Cell(BlenderObject):
 
     def __contains__(self, k: str):
         return self.obj.__contains__(k)
+
+    # ===== Sensing and secretion =====
+
+    @property
+    def molecule_concs(self):
+        """Get the concentrations of the molecules around the cell radius."""
+        return self.diffsys.get_concentrations(self.COM(), self.radius())
+
+    # @molecule_concs.setter
+    # def secrete_molecule_concs(self, molecule_concs):
+    #     self["molecules"] = {str(k): v for k, v in molecule_concs.items()}
+    #     self.diffsys.molecule_concs = molecule_concs
+
+    def link_molecule_to_property(self, molecule: Molecule, property, gscale=(0, 1), pscale=(0, 1)):
+        """Link molecule to property, so that changes in the extracellular
+        concentrations of the molecule will cause changes in the physical property.
+        """
+        if property == "motion_direction":
+            hook = create_direction_updater(self, molecule)
+        else:
+            hook = create_scalar_updater(self, molecule, property, "linear", gscale, pscale)
+
+        self.diffsys_hooks.append(hook)
+
+    def cellular_sensing(self, mol: Molecule):
+        """Step the sensing of the cell."""
+        coords, concentrations = self.diffsys.get_ball_concentrations(
+            mol=mol,
+            center=self.COM(),
+            radius=self.radius(),
+        )
+        # print(coords, concentrations)
+        print(self.diffsys.get_total_ball_concentrations(mol=mol, center=self.COM(), radius=self.radius()))
+        return coords, concentrations
+
+    def cellular_secretion(self, mol: Molecule):
+        """Step the secretion of the cell."""
+        self.diffsys.update_concentrations_around_sphere(
+            mol=mol,
+            center=self.COM(),
+            radius=self.radius(),
+            value=0.5,
+        )
+
+    def step_extracellular_molecules(self, mol: Molecule):
+        """Step the extracellular molecules of the cell."""
+        # sense molecules
+        # self.cellular_sensing(mol=mol)
+        # secrete molecules
+        self.cellular_secretion(mol=mol)
+        # update physical attributes
+        for hook in self.diffsys_hooks:
+            hook()
 
 
 class PropertyUpdater:

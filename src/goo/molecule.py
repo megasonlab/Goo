@@ -19,14 +19,29 @@ class Molecule:
     def __init__(
         self, name: str, molecule_conc: float, D: float, gradient: str | None = None
     ):
-        self.name = name
-        self.D = D
-        self.molecule_conc = molecule_conc
-        self.gradient = gradient
+        self._name = name
+        self._D = D
+        self._molecule_conc = molecule_conc
+        self._gradient = gradient
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def D(self):
+        return self._D
+
+    @property
+    def conc(self):
+        return self._molecule_conc
+
+    @property
+    def gradient(self):
+        return self._gradient
 
     def __repr__(self):
-        str = f"Molecule(concentration={self.molecule_conc}" f"diffusion_rate={self.D})"
-        return str
+        return f"Molecule(concentration={self.molecule_conc}, diffusion_rate={self.D})"
 
     def __str__(self):
         return self.name
@@ -149,6 +164,7 @@ class DiffusionSystem:
         # Convert flat index to 3D index
         idx = self._nearest_idx(point)
         self._grid_concentrations[mol].ravel()[idx] += value
+        return
 
     def get_molecule_concentration(self, mol, point):
         """Add molecule value to a certain point at a given voxel in the grid."""
@@ -156,23 +172,22 @@ class DiffusionSystem:
         idx = self._nearest_idx(point)
         return self._grid_concentrations[mol].ravel()[idx]
 
-    def get_ball_concentrations(self, center, radius):
-        """Returns total concentrations of each molecule within a sphere.
+    def get_total_ball_concentrations(self, mol, center, radius):
+        """Returns total concentration of a molecule within a sphere.
 
         Args:
+            mol: Molecule to get concentration for
             center: Coordinates of sphere center
             radius: Radius of sphere
 
         Returns:
-            dict: Mapping of molecules to their total concentrations within the sphere
+            float: Total concentration of the molecule within the sphere
         """
         idxs = self._kd_tree.query_ball_point(center, radius)
-        molecule_concs = {}
-        for mol, grid_concs in self._grid_concentrations.items():
-            molecule_concs[mol] = np.sum(grid_concs.ravel()[idxs])
-        return molecule_concs
+        total_conc = np.sum(self._grid_concentrations[mol].ravel()[idxs])
+        return (mol.name, total_conc)
 
-    def get_coords_concentrations(self, mol, center, radius):
+    def get_ball_concentrations(self, mol, center, radius):
         """Returns the coordinates and concentrations of a molecule
         of all the voxels within a sphere.
 
@@ -189,29 +204,30 @@ class DiffusionSystem:
         concs = self._grid_concentrations[mol].ravel()[idxs]
         return coords, concs
 
-    def diffuse(self):
+    def update_concentrations_around_sphere(self, mol, center, radius, value):
+        """Add a value to a molecule concentration
+        at a certain point that is converted to the nearesrt voxel in the grid."""
+        # Convert flat index to 3D index
+        idxs = self._kd_tree.query_ball_point(center, radius)
+        self._grid_concentrations[mol].ravel()[idxs] += value
+        return
+
+    def diffuse(self, mol: Molecule):
         """Simulate the diffusion of molecules in the grid
         using the Laplace operator."""
-        for mol in self.molecules:
-            conc = self._grid_concentrations[mol]
-            laplacian = laplace(conc, mode="wrap")
-            diff_coeff = mol.D
-            conc += self.time_step * diff_coeff * laplacian
-            conc = np.clip(conc, 0, None)
-            self._grid_concentrations[mol] = conc
+        conc = self._grid_concentrations[mol]
+        laplacian = laplace(conc, mode="wrap")
+        diff_coeff = mol.D
+        conc += self.time_step * diff_coeff * laplacian
+        conc = np.clip(conc, 0, None)
+        self._grid_concentrations[mol] = conc
+        return
 
-    def simulate_diffusion(self):
+    def simulate_diffusion(self, mol: Molecule):
         """Simulate the diffusion of molecules in the grid."""
         tot_time = self.total_time
         t_step = self.time_step
         num_steps = int(tot_time / t_step)
         for _ in range(num_steps):
-            self.diffuse()
-
-    def molecular_sensing(self, cell):
-        """Simulate the sensing of molecular signals by a cell."""
-        pass
-
-    def molecular_secretion(self, cell):
-        """Simulate the secretion of molecular signals by a cell."""
-        pass
+            self.diffuse(mol)
+        return

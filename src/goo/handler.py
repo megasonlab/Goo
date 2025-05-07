@@ -9,7 +9,6 @@ import bmesh
 import bpy
 import h5py
 import numpy as np
-import tifffile
 import xarray as xr
 
 from mathutils import Vector
@@ -19,17 +18,7 @@ from typing_extensions import override
 
 from goo.cell import Cell
 from goo.gene import Gene
-from goo.molecule import DiffusionSystem
-
-
-def save_tiff(data: np.ndarray, path: str) -> None:
-    """Save a numpy array as a TIFF file.
-
-    Args:
-        data: The numpy array to save
-        path: The path where to save the TIFF file
-    """
-    tifffile.imwrite(path, data)
+from goo.molecule import DiffusionSystem, Molecule
 
 
 class Handler(ABC):
@@ -216,8 +205,12 @@ class DiffusionHandler(Handler):
         self.get_diffsystem().build_kdtree()
 
     def run(self, scene, depsgraph) -> None:
-        self.get_diffsystem().simulate_diffusion()
+        for mol in self.get_diffsystem().molecules:
+            self.get_diffsystem().simulate_diffusion(mol)
 
+            for cell in self.get_cells():
+                cell.cellular_sensing(mol=mol)
+                cell.cellular_secretion(mol=mol)
 
 class NetworkHandler(Handler):
     """Handler for gene regulatory networks."""
@@ -340,7 +333,7 @@ class RandomMotionHandler(Handler):
 
 
 """Possible properties by which cells are colored."""
-Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE"])
+Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE", "MOLECULE"])
 
 """Color map for the random cell colorizer."""
 COLORS = [
@@ -384,12 +377,12 @@ class ColorizeHandler(Handler):
     def __init__(
         self,
         colorizer: Colorizer = Colorizer.PRESSURE,
-        gene: Gene | str = None,
+        metabolite: Gene | Molecule | str = None,
         range: tuple | None = None,
     ):
 
         self.colorizer = colorizer
-        self.gene = gene
+        self.metabolite = metabolite
         self.range = range
         self.color_map = {}
         self.color_counter = 0
@@ -423,23 +416,28 @@ class ColorizeHandler(Handler):
 
         property_values = None
         if self.colorizer != Colorizer.RANDOM:
-            property_values = {
-                Colorizer.PRESSURE: np.array([
+            if self.colorizer == Colorizer.PRESSURE:
+                property_values = np.array([
                     cell.pressure if (cell.cloth_mod and
                                     hasattr(cell.cloth_mod, 'settings'))
                     else 0.0 for cell in cells
-                ]),
-                Colorizer.VOLUME: np.array([cell.volume() for cell in cells]),
-                Colorizer.GENE: (np.array([cell.gene_concs[self.gene]
+                ])
+            elif self.colorizer == Colorizer.VOLUME:
+                property_values = np.array([cell.volume() for cell in cells])
+            elif self.colorizer == Colorizer.GENE:
+                property_values = (np.array([cell.gene_concs[self.metabolite]
                                          for cell in cells])
-                                if self.gene else np.array([])),
-            }.get(self.colorizer, None)
+                                if self.metabolite else np.array([]))
+            elif self.colorizer == Colorizer.MOLECULE:
+                property_values = (np.array([cell.molecule_concs[self.metabolite]
+                                          for cell in cells])
+                                 if self.metabolite and all(hasattr(c, 'diffsys') and c.diffsys is not None for c in cells) else np.array([]))
+            else:
+                print(f"Error: Invalid colorizer type: {self.colorizer}")
+                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, MOLECULE, or RANDOM.")
 
             if property_values is not None:
                 values = self._scale(property_values)
-            else:
-                print(f"Error: Invalid colorizer type: {self.colorizer}")
-                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, or RANDOM.")
         else:
             # Assign colors in a deterministic sequence from the fixed palette
             for cell in cells:
