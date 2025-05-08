@@ -17,11 +17,11 @@ class Molecule:
     """
 
     def __init__(
-        self, name: str, molecule_conc: float, D: float, gradient: str | None = None
+        self, name: str, conc: float, D: float, gradient: str | None = None
     ):
         self._name = name
         self._D = D
-        self._molecule_conc = molecule_conc
+        self._molecule_conc = conc
         self._gradient = gradient
 
     @property
@@ -150,7 +150,10 @@ class DiffusionSystem:
                 self.grid_center[2]
                 + offset[2] * (self.grid_size[2] - 1) / 2 * self.element_size[2],
             )
-            bpy.ops.object.empty_add(type="PLAIN_AXES", location=corner_position)
+
+            for mol in self.molecules:
+                bpy.ops.object.empty_add(type="PLAIN_AXES", location=corner_position)
+                bpy.context.active_object["mol_concentration"] = self.get_molecule_concentration(mol, corner_position)
 
         return self._kd_tree
 

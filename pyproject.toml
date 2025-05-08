@@ -45,7 +45,7 @@ dependencies = [
 blender40 = [
     "numpy==1.26.4",  # Last version supporting Python 3.10
     "scipy==1.14.0",  # Last version supporting Python 3.10
-    "fake-bpy-module==20240524"
+    "fake-bpy-module==20240524",
 ]
 
 # Blender 4.5 specific dependencies (Python 3.11)
@@ -68,7 +68,7 @@ dev = [
     "pre-commit",
     "hatch",
     "uv",
-    "matplotlib"
+    "matplotlib",
 ]
 
 # Documentation tools

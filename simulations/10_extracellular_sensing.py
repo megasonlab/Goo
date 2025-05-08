@@ -26,7 +26,8 @@ sim.add_handlers(
         goo.RecenterHandler(),
 #        goo.RemeshHandler(),
         goo.ColorizeHandler(goo.Colorizer.RANDOM),
-        goo.DiffusionHandler(),
+        goo.MolecularHandler(),
+        goo.ConcentrationVisualizationHandler(spacing=1),
 #        goo.DataExporter("/Users/antoine/Harvard/MegasonLab/Goo-1/paper/data/test.h5" , goo.DataFlag.ALL),
     ]
 )

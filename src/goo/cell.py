@@ -587,6 +587,7 @@ class Cell(BlenderObject):
         self.grn.update_concs(com, radius, dt)
         self["genes"] = {str(k): v for k, v in self.gene_concs.items()}
 
+    def update_physics_with_grn(self):
         # Update physical attributes
         for hook in self.grn_hooks:
             hook()
@@ -645,7 +646,7 @@ class Cell(BlenderObject):
 
         self.diffsys_hooks.append(hook)
 
-    def cellular_sensing(self, mol: Molecule):
+    def sense(self, mol: Molecule):
         """Step the sensing of the cell."""
         coords, concentrations = self.diffsys.get_ball_concentrations(
             mol=mol,
@@ -656,7 +657,7 @@ class Cell(BlenderObject):
         print(self.diffsys.get_total_ball_concentrations(mol=mol, center=self.COM(), radius=self.radius()))
         return coords, concentrations
 
-    def cellular_secretion(self, mol: Molecule):
+    def secrete(self, mol: Molecule):
         """Step the secretion of the cell."""
         self.diffsys.update_concentrations_around_sphere(
             mol=mol,
@@ -665,12 +666,8 @@ class Cell(BlenderObject):
             value=0.5,
         )
 
-    def step_extracellular_molecules(self, mol: Molecule):
+    def update_physics_with_molecules(self, mol: Molecule):
         """Step the extracellular molecules of the cell."""
-        # sense molecules
-        # self.cellular_sensing(mol=mol)
-        # secrete molecules
-        self.cellular_secretion(mol=mol)
         # update physical attributes
         for hook in self.diffsys_hooks:
             hook()
@@ -696,8 +693,8 @@ class PropertyUpdater:
 
     def __call__(self):
         """Update the property of a cell based on the gene value."""
-        gene_value = self.getter()
-        prop_value = self.transformer(gene_value)
+        metabolite_value = self.getter()
+        prop_value = self.transformer(metabolite_value)
         self.setter(prop_value)
 
 
@@ -761,34 +758,37 @@ def create_scalar_updater(
 
 def create_direction_updater(
     cell: Cell,
-    gene: Gene,
+    metabolite: Gene | Molecule,
 ):
-    """Create a direction updater that links a gene to the direction of a cell.
+    """Create a direction updater that links a gene or molecule to the direction of a cell.
 
     Args:
         cell: The cell object.
-        gene: The gene that is linked to the direction.
+        metabolite: The gene or molecule that is linked to the direction.
     """
-    def molecule_getter():
-        """Get the molecule values from the cell's gene regulatory network."""
-        return cell.gene_concs[gene]
+    def metabolite_conc_getter():
+        """Get the molecule values from the cell's gene regulatory network or diffusion system."""
+        if isinstance(metabolite, Molecule):
+            return cell.sense(mol=metabolite)
+        else:
+            return cell.gene_concs[metabolite]
 
-    def weighted_direction():
+    def weighted_direction(metabolite_conc):
         """Calculate the weighted direction of the cell based on the molecule values."""
-        coords, concs = molecule_getter()
+        coords, concs = metabolite_conc
         direction = np.average(coords, axis=0, weights=concs)
         return direction - cell.loc
 
-    def set_direction():
+    def set_direction(direction):
         """Set the direction of the cell."""
-        cell.move(weighted_direction())
+        cell.move(direction)
 
-    return PropertyUpdater(molecule_getter, weighted_direction, set_direction)
+    return PropertyUpdater(metabolite_conc_getter, weighted_direction, set_direction)
 
 
 def create_motion_strength_updater(
         cell: Cell,
-        gene: Gene,
+        metabolite: Gene | Molecule,
         gscale=(0.5, 2),
         pscale=(0, 1),
 ):
@@ -808,23 +808,23 @@ def create_motion_strength_updater(
     gmin, gmax = gscale
     pmin, pmax = pscale
 
-    def gene_conc_getter():
+    def metabolite_conc_getter():
         """Get the gene concentration from the cell's gene regulatory network."""
-        gene_conc = cell.gene_concs.get(gene)
-        normalized_gene_conc = linear_transformer(gene_conc)
-        return normalized_gene_conc
+        metabolite_conc = cell.gene_concs.get(metabolite)
+        normalized_metabolite_conc = linear_transformer(metabolite_conc)
+        return normalized_metabolite_conc
 
-    def linear_transformer(gene_value):
+    def linear_transformer(metabolite_value):
         """Normalize the gene value to a value between gscale min and max."""
-        if gene_value <= gmin:
+        if metabolite_value <= gmin:
             return pmin
-        if gene_value >= gmax:
+        if metabolite_value >= gmax:
             return pmax
-        return (gene_value - gmin) / (gmax - gmin) * (pmax - pmin) + pmin
+        return (metabolite_value - gmin) / (gmax - gmin) * (pmax - pmin) + pmin
 
-    def weighted_motion_strength(gene_value):
+    def weighted_motion_strength(metabolite_value):
         """Calculate the weighted motion strength of the cell based on the gene value."""
-        motion_strength = (gene_value * cell.motion_force.init_strength)
+        motion_strength = (metabolite_value * cell.motion_force.init_strength)
         return motion_strength
 
     def set_motion_strength(motion_strength):
@@ -832,7 +832,7 @@ def create_motion_strength_updater(
         cell.celltype.motion_strength = motion_strength
 
     return PropertyUpdater(
-        gene_conc_getter,
+        metabolite_conc_getter,
         weighted_motion_strength,
         set_motion_strength
         )
