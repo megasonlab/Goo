@@ -98,6 +98,7 @@ class ConcentrationVisualizationHandler(Handler):
             bpy.data.objects.remove(existing, do_unlink=True)
 
     def _create_pointcloud(self, grid_conc):
+        grid_conc = grid_conc[::2, ::2, ::2]
         nx, ny, nz = grid_conc.shape
         diff_system = self.get_diffsystem()
 
@@ -142,8 +143,8 @@ class ConcentrationVisualizationHandler(Handler):
         attr_node.inputs["Name"].default_value = "conc"
 
         color_ramp = nodes.new("ShaderNodeValToRGB")
-        color_ramp.color_ramp.elements[0].color = (0, 0, 1, 0.01)
-        color_ramp.color_ramp.elements[1].color = (1, 0, 0, 0.01)
+        color_ramp.color_ramp.elements[0].color = (0, 0, 1, 0.02)
+        color_ramp.color_ramp.elements[1].color = (1, 0, 0, 0.02)
 
         store_color_node = nodes.new("GeometryNodeStoreNamedAttribute")
         store_color_node.data_type = 'FLOAT_COLOR'
@@ -208,7 +209,16 @@ class ConcentrationVisualizationHandler(Handler):
             obj.name = "CubeInstance"
             obj.hide_render = True
             obj.hide_viewport = True
+
+            # Optimize cube geometry
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.delete(type='ONLY_FACE')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.edge_face_add()
+            bpy.ops.object.mode_set(mode='OBJECT')
+
         return obj
+
 
 
 class StopHandler(Handler):
