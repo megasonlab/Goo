@@ -24,7 +24,7 @@ network1.load_circuits(
     goo.ProdRepression(x, z, kcat=0.5, n=3)
     )
 cell.grn = network1
-cell.metabolites = {x: 2, y: 0.5, z: 0.5}
+cell.gene_concs = {x: 2, y: 0.5, z: 0.5}
 cell.link_gene_to_property(gene=x, property="motion_strength")
 
 sim = goo.Simulator(celltypes=[celltype], time=1000, physics_dt=1)

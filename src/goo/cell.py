@@ -14,7 +14,7 @@ from .gene import (
     GeneRegulatoryNetwork as GRN,
 )
 from .growth import *
-from .molecule import DiffusionSystem
+from .molecule import DiffusionSystem, Molecule
 from .utils import *
 
 
@@ -44,7 +44,9 @@ class Cell(BlenderObject):
 
         self.growth_controller: GrowthController = None
         self.grn: GRN = None
-        self.hooks = []
+        self.diffsys: DiffusionSystem = None
+        self.grn_hooks = []
+        self.diffsys_hooks = []
 
         self.just_divided = False
         self.physics_enabled = False
@@ -505,6 +507,7 @@ class Cell(BlenderObject):
         if self.growth_controller:
             self.growth_controller.set_pressure(pressure)
 
+    # ===== Force operations =====
     def add_effector(self, force: Force | ForceCollection):
         """Add a force or a collection of forces that affects this cell.
 
@@ -573,33 +576,34 @@ class Cell(BlenderObject):
             new_pressure = self.growth_controller.step_growth(self.volume(), dt)
             self.pressure = new_pressure
 
-    def step_grn(self, diffsys: DiffusionSystem = None, dt=1):
-        """Calculate and update the metabolite concentrations
+    # ===== Gene regulatory network items =====
+    def step_grn(self, dt=1):
+        """Calculate and update the gene concentrations
         of the gene regulatory network after 1 time step."""
         com = self.COM()
         radius = self.radius()
 
         # Step through GRN
-        self.grn.update_concs(diffsys, com, radius, dt)
-        self["genes"] = {str(k): v for k, v in self.metabolites.items()}
+        self.grn.update_concs(com, radius, dt)
+        self["genes"] = {str(k): v for k, v in self.gene_concs.items()}
 
+    def update_physics_with_grn(self):
         # Update physical attributes
-        for hook in self.hooks:
-            hook(diffsys)
+        for hook in self.grn_hooks:
+            hook()
 
-    # ===== Gene regulatory network items =====
     @property
-    def metabolites(self):
-        return self.grn.concs
+    def gene_concs(self):
+        return self.grn.gene_concs
 
-    @metabolites.setter
-    def metabolites(self, metabolites):
-        self["genes"] = {str(k): v for k, v in metabolites.items()}
-        self.grn.concs = metabolites
+    @gene_concs.setter
+    def gene_concs(self, gene_concs):
+        self["genes"] = {str(k): v for k, v in gene_concs.items()}
+        self.grn.gene_concs = gene_concs
 
-    def link_gene_to_property(self, gene, property, gscale=(0, 1), pscale=(0, 1)):
-        """Link gene to property, so that changes in the gene will
-        cause changes in the physical property.
+    def link_gene_to_property(self, gene: Gene, property, gscale=(0, 1), pscale=(0, 1)):
+        """Link gene to property, so that changes in the gene levels
+        will cause changes in the physical property.
         """
         if property == "motion_direction":
             hook = create_direction_updater(self, gene)
@@ -608,7 +612,7 @@ class Cell(BlenderObject):
         else:
             hook = create_scalar_updater(self, gene, property, "linear", gscale, pscale)
 
-        self.hooks.append(hook)
+        self.grn_hooks.append(hook)
 
     def __setitem__(self, name: str, value) -> None:
         self.obj[name] = value
@@ -618,6 +622,55 @@ class Cell(BlenderObject):
 
     def __contains__(self, k: str):
         return self.obj.__contains__(k)
+
+    # ===== Sensing and secretion =====
+
+    @property
+    def molecule_concs(self):
+        """Get the concentrations of the molecules around the cell radius."""
+        return self.diffsys.get_concentrations(self.COM(), self.radius())
+
+    # @molecule_concs.setter
+    # def secrete_molecule_concs(self, molecule_concs):
+    #     self["molecules"] = {str(k): v for k, v in molecule_concs.items()}
+    #     self.diffsys.molecule_concs = molecule_concs
+
+    def link_molecule_to_property(self, molecule: Molecule, property):
+        """Link molecule to property, so that changes in the extracellular
+        concentrations of the molecule will cause changes in the physical property.
+        """
+        if property == "motion_direction":
+            hook = create_direction_updater(self, molecule)
+        else:
+            hook = create_scalar_updater(self, molecule, property, "linear")
+
+        self.diffsys_hooks.append(hook)
+
+    def sense(self, mol: Molecule):
+        """Step the sensing of the cell."""
+        coords, concentrations = self.diffsys.get_ball_concentrations(
+            mol=mol,
+            center=self.COM(),
+            radius=self.radius(),
+        )
+        # print(coords, concentrations)
+        print(self.diffsys.get_total_ball_concentrations(mol=mol, center=self.COM(), radius=self.radius()))
+        return coords, concentrations
+
+    def secrete(self, mol: Molecule):
+        """Step the secretion of the cell."""
+        self.diffsys.update_concentrations_around_sphere(
+            mol=mol,
+            center=self.COM(),
+            radius=self.radius(),
+            value=0.5,
+        )
+
+    def update_physics_with_molecules(self, mol: Molecule):
+        """Step the extracellular molecules of the cell."""
+        # update physical attributes
+        for hook in self.diffsys_hooks:
+            hook()
 
 
 class PropertyUpdater:
@@ -638,16 +691,16 @@ class PropertyUpdater:
         self.transformer = transformer
         self.setter = setter
 
-    def __call__(self, diffsys: DiffusionSystem):
+    def __call__(self):
         """Update the property of a cell based on the gene value."""
-        gene_value = self.getter(diffsys)
-        prop_value = self.transformer(gene_value)
+        metabolite_value = self.getter()
+        prop_value = self.transformer(metabolite_value)
         self.setter(prop_value)
 
 
 def create_scalar_updater(
     cell: Cell,
-    gene: Gene,
+    metabolite: Gene | Molecule,
     property,
     relationship="linear",
     gscale=(0, 1),
@@ -670,9 +723,12 @@ def create_scalar_updater(
     pmin, pmax = pscale
 
     # Simple gene getter
-    def gene_getter(diffsys):
-        """Get the gene value from the diffusion system."""
-        return cell.metabolites[gene]
+    def metabolite_getter():
+        """Get the gene value from the cell's gene regulatory network."""
+        if isinstance(metabolite, Molecule):
+            return cell.sense(mol=metabolite)
+        else:
+            return cell.gene_concs[metabolite]
 
     # Different transformers
     def linear_transformer(gene_value):
@@ -705,21 +761,28 @@ def create_scalar_updater(
 
 def create_direction_updater(
     cell: Cell,
-    gene: Gene,
+    metabolite: Gene | Molecule,
 ):
-    """Create a direction updater that links a gene to the direction of a cell.
+    """Create a direction updater that links a gene or molecule to the direction of a cell.
 
     Args:
         cell: The cell object.
-        gene: The gene that is linked to the direction.
+        metabolite: The gene or molecule that is linked to the direction.
     """
-    def molecule_getter(diffsys: DiffusionSystem):
-        """Get the molecule values from the diffusion system."""
-        return diffsys.get_coords_concentrations(gene, cell.COM(), cell.radius())
+    def metabolite_conc_getter():
+        """Get the molecule values from the cell's gene regulatory network or diffusion system."""
+        if isinstance(metabolite, Molecule):
+            return cell.diffsys.get_ball_concentrations(
+                mol=metabolite,
+                center=cell.COM(),
+                radius=cell.radius()
+            )
+        else:
+            return cell.gene_concs[metabolite]
 
-    def weighted_direction(molecule_values):
+    def weighted_direction(metabolite_conc):
         """Calculate the weighted direction of the cell based on the molecule values."""
-        coords, concs = molecule_values
+        coords, concs = metabolite_conc
         direction = np.average(coords, axis=0, weights=concs)
         return direction - cell.loc
 
@@ -727,12 +790,12 @@ def create_direction_updater(
         """Set the direction of the cell."""
         cell.move(direction)
 
-    return PropertyUpdater(molecule_getter, weighted_direction, set_direction)
+    return PropertyUpdater(metabolite_conc_getter, weighted_direction, set_direction)
 
 
 def create_motion_strength_updater(
         cell: Cell,
-        gene: Gene,
+        metabolite: Gene | Molecule,
         gscale=(0.5, 2),
         pscale=(0, 1),
 ):
@@ -752,23 +815,23 @@ def create_motion_strength_updater(
     gmin, gmax = gscale
     pmin, pmax = pscale
 
-    def gene_conc_getter(diffsys: DiffusionSystem):
+    def metabolite_conc_getter():
         """Get the gene concentration from the cell's gene regulatory network."""
-        gene_conc = cell.grn.concs.get(gene)
-        normalized_gene_conc = linear_transformer(gene_conc)
-        return normalized_gene_conc
+        metabolite_conc = cell.gene_concs.get(metabolite)
+        normalized_metabolite_conc = linear_transformer(metabolite_conc)
+        return normalized_metabolite_conc
 
-    def linear_transformer(gene_value):
+    def linear_transformer(metabolite_value):
         """Normalize the gene value to a value between gscale min and max."""
-        if gene_value <= gmin:
+        if metabolite_value <= gmin:
             return pmin
-        if gene_value >= gmax:
+        if metabolite_value >= gmax:
             return pmax
-        return (gene_value - gmin) / (gmax - gmin) * (pmax - pmin) + pmin
+        return (metabolite_value - gmin) / (gmax - gmin) * (pmax - pmin) + pmin
 
-    def weighted_motion_strength(gene_conc):
+    def weighted_motion_strength(metabolite_value):
         """Calculate the weighted motion strength of the cell based on the gene value."""
-        motion_strength = (gene_conc * cell.motion_force.init_strength)
+        motion_strength = (metabolite_value * cell.motion_force.init_strength)
         return motion_strength
 
     def set_motion_strength(motion_strength):
@@ -776,7 +839,7 @@ def create_motion_strength_updater(
         cell.celltype.motion_strength = motion_strength
 
     return PropertyUpdater(
-        gene_conc_getter,
+        metabolite_conc_getter,
         weighted_motion_strength,
         set_motion_strength
         )
@@ -919,7 +982,7 @@ class CellType:
         target_volume: float | None = None,
         genes_enabled: bool = True,
         circuits: list[Circuit] | None = None,
-        metabolites: dict[str, float] = {},
+        genes: dict[str, float] = {},
         obj: bpy.types.Object = None,
         **mesh_kwargs,
     ):
@@ -953,7 +1016,7 @@ class CellType:
         if genes_enabled:
             self.pattern.build_network(
                 circuits=circuits,
-                metabolites=metabolites,
+                genes=genes,
             )
         cell = self.pattern.retrieve_cell()
         cell.celltype = self
@@ -991,7 +1054,7 @@ class CellPattern:
     def __init__(self):
         self.reset()
         self.circuits = []
-        self.metabolites = {}
+        self.genes = {}
 
     def reset(self):
         self._cell = Cell()
@@ -1104,14 +1167,14 @@ class CellPattern:
         self._cell.pressure = controller.initial_pressure
         self._cell.growth_controller = controller
 
-    def build_network(self, circuits=None, metabolites=None):
+    def build_network(self, circuits=None, genes=None):
         circuits = [] if circuits is None else list(circuits)
-        metabolites = {} if metabolites is None else dict(metabolites)
+        genes = {} if genes is None else dict(genes)
 
         grn = GRN()
         grn.load_circuits(*circuits)
         self._cell.grn = grn
-        self._cell.metabolites = metabolites
+        self._cell.genes = genes
 
 
 class StandardPattern(CellPattern):

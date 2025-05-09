@@ -23,7 +23,7 @@ network1.load_circuits(
     goo.ProdRepression(x, z, kcat=0.4, n=3),
 )
 cell.grn = network1
-cell.metabolites = {x: 2, y: 0.1, z: 0.1}
+cell.gene_concs = {x: 2, y: 0.1, z: 0.1}
 
 sim = goo.Simulator(celltypes=[celltype], time=200, physics_dt=1)
 sim.setup_world(seed=2025)
