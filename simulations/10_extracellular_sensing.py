@@ -9,6 +9,7 @@ goo.reset_scene()
 # Defining cells
 celltype = goo.CellType("cellA", target_volume=70, pattern="simple")
 celltype.homo_adhesion_strength = 500
+celltype.motion_strength = 100
 cell = celltype.create_cell(name="cell", loc=(0, 0, 0), color=(0, 1, 1))
 cell.stiffness = 5
 

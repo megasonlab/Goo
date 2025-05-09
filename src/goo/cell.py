@@ -624,16 +624,12 @@ class Cell(BlenderObject):
         return self.obj.__contains__(k)
 
     # ===== Sensing and secretion =====
-
     @property
     def molecule_concs(self):
         """Get the concentrations of the molecules around the cell radius."""
-        return self.diffsys.get_concentrations(self.COM(), self.radius())
-
-    # @molecule_concs.setter
-    # def secrete_molecule_concs(self, molecule_concs):
-    #     self["molecules"] = {str(k): v for k, v in molecule_concs.items()}
-    #     self.diffsys.molecule_concs = molecule_concs
+        if not self.diffsys:
+            return {}
+        return {mol: self.diffsys.get_total_ball_concentrations(mol, self.COM(), self.radius()) for mol in self.diffsys.molecules}
 
     def link_molecule_to_property(self, molecule: Molecule, property):
         """Link molecule to property, so that changes in the extracellular
@@ -756,7 +752,7 @@ def create_scalar_updater(
         case _:
             raise NotImplementedError()
 
-    return PropertyUpdater(gene_getter, transformer, setter)
+    return PropertyUpdater(metabolite_getter, transformer, setter)
 
 
 def create_direction_updater(
