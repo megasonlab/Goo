@@ -170,7 +170,7 @@ class DiffusionSystem:
         return
 
     def get_molecule_concentration(self, mol, point):
-        """Add molecule value to a certain point at a given voxel in the grid."""
+        """Get the concentration of a molecule at a certain point."""
         # Convert flat index to 3D index
         idx = self._nearest_idx(point)
         return self._grid_concentrations[mol].ravel()[idx]

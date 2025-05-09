@@ -635,14 +635,14 @@ class Cell(BlenderObject):
     #     self["molecules"] = {str(k): v for k, v in molecule_concs.items()}
     #     self.diffsys.molecule_concs = molecule_concs
 
-    def link_molecule_to_property(self, molecule: Molecule, property, gscale=(0, 1), pscale=(0, 1)):
+    def link_molecule_to_property(self, molecule: Molecule, property):
         """Link molecule to property, so that changes in the extracellular
         concentrations of the molecule will cause changes in the physical property.
         """
         if property == "motion_direction":
             hook = create_direction_updater(self, molecule)
         else:
-            hook = create_scalar_updater(self, molecule, property, "linear", gscale, pscale)
+            hook = create_scalar_updater(self, molecule, property, "linear")
 
         self.diffsys_hooks.append(hook)
 
@@ -700,7 +700,7 @@ class PropertyUpdater:
 
 def create_scalar_updater(
     cell: Cell,
-    gene: Gene,
+    metabolite: Gene | Molecule,
     property,
     relationship="linear",
     gscale=(0, 1),
@@ -723,9 +723,12 @@ def create_scalar_updater(
     pmin, pmax = pscale
 
     # Simple gene getter
-    def gene_getter():
+    def metabolite_getter():
         """Get the gene value from the cell's gene regulatory network."""
-        return cell.gene_concs[gene]
+        if isinstance(metabolite, Molecule):
+            return cell.sense(mol=metabolite)
+        else:
+            return cell.gene_concs[metabolite]
 
     # Different transformers
     def linear_transformer(gene_value):
@@ -769,7 +772,11 @@ def create_direction_updater(
     def metabolite_conc_getter():
         """Get the molecule values from the cell's gene regulatory network or diffusion system."""
         if isinstance(metabolite, Molecule):
-            return cell.sense(mol=metabolite)
+            return cell.diffsys.get_ball_concentrations(
+                mol=metabolite,
+                center=cell.COM(),
+                radius=cell.radius()
+            )
         else:
             return cell.gene_concs[metabolite]
 
