@@ -9,7 +9,6 @@ import bmesh
 import bpy
 import h5py
 import numpy as np
-import tifffile
 import xarray as xr
 
 from mathutils import Vector
@@ -19,17 +18,7 @@ from typing_extensions import override
 
 from goo.cell import Cell
 from goo.gene import Gene
-from goo.molecule import DiffusionSystem
-
-
-def save_tiff(data: np.ndarray, path: str) -> None:
-    """Save a numpy array as a TIFF file.
-
-    Args:
-        data: The numpy array to save
-        path: The path where to save the TIFF file
-    """
-    tifffile.imwrite(path, data)
+from goo.molecule import DiffusionSystem, Molecule
 
 
 class Handler(ABC):
@@ -62,6 +51,174 @@ class Handler(ABC):
             depsgraph: The dependency graph.
         """
         raise NotImplementedError("Subclasses must implement run() method.")
+
+
+class ConcentrationVisualizationHandler(Handler):
+    """Visualizes a 3D concentration array using color-coded transparent instanced cubes in Blender."""
+
+    def __init__(self, spacing: float | None = None):
+        super().__init__()
+        self.get_cells = None
+        self.get_diffsystem = None
+        self.dt = None
+        self.spacing = spacing
+        self.name = "ConcentrationVisualization"
+        self.instance_scale = 1
+
+    def setup(
+        self,
+        get_cells: Callable[[], list],
+        get_diffsystem: Callable[[], object],
+        dt: float,
+    ) -> None:
+        self.get_cells = get_cells
+        self.get_diffsystem = get_diffsystem
+        self.dt = dt
+
+    def run(self, scene, depsgraph):
+        if not self.get_diffsystem:
+            print("Warning: ConcentrationVisualizationHandler not initialized. Call setup() first.")
+            return
+
+        grid_conc_dict = self.get_diffsystem()._grid_concentrations
+        first_mol = next(iter(grid_conc_dict.values()))
+        grid_shape = first_mol.shape
+
+        grid_conc = np.zeros(grid_shape, dtype=np.float64)
+        for conc in grid_conc_dict.values():
+            grid_conc += np.array(conc, dtype=np.float64)
+
+        self._remove_existing_object()
+        obj = self._create_pointcloud(grid_conc)
+        self._add_geometry_nodes(obj)
+
+    def _remove_existing_object(self):
+        existing = bpy.data.objects.get(self.name)
+        if existing:
+            bpy.data.objects.remove(existing, do_unlink=True)
+
+    def _create_pointcloud(self, grid_conc):
+        grid_conc = grid_conc[::2, ::2, ::2]
+        nx, ny, nz = grid_conc.shape
+        diff_system = self.get_diffsystem()
+
+        xlim, ylim, zlim = (np.array(diff_system.grid_size) - 1) / 2 * diff_system.element_size
+        grid_center = diff_system.grid_center
+
+        x = np.linspace(-xlim, xlim, nx) + grid_center[0]
+        y = np.linspace(-ylim, ylim, ny) + grid_center[1]
+        z = np.linspace(-zlim, zlim, nz) + grid_center[2]
+
+        values = grid_conc.flatten()
+        values_norm = (values - np.min(values)) / (np.max(values) - np.min(values) + 1e-9)
+
+        verts = [(x[i], y[j], z[k]) for i in range(nx) for j in range(ny) for k in range(nz)]
+
+        mesh = bpy.data.meshes.new(self.name + "_mesh")
+        mesh.from_pydata(verts, [], [])
+        mesh.update()
+
+        conc_layer = mesh.attributes.new(name="conc", type='FLOAT', domain='POINT')
+        conc_layer.data.foreach_set("value", values_norm)
+
+        obj = bpy.data.objects.new(self.name, mesh)
+        bpy.context.collection.objects.link(obj)
+
+        return obj
+
+    def _add_geometry_nodes(self, obj):
+        geo_node = obj.modifiers.new("GeoNodes", type='NODES')
+        nt = geo_node.node_group = bpy.data.node_groups.new("GN_VisualizeConc", 'GeometryNodeTree')
+
+        nodes, links = nt.nodes, nt.links
+        nodes.clear()
+
+        input_node = nodes.new("NodeGroupInput")
+        output_node = nodes.new("NodeGroupOutput")
+        nt.interface.new_socket("Geometry", socket_type='NodeSocketGeometry', in_out='INPUT')
+        nt.interface.new_socket("Geometry", socket_type='NodeSocketGeometry', in_out='OUTPUT')
+
+        attr_node = nodes.new("GeometryNodeInputNamedAttribute")
+        attr_node.data_type = 'FLOAT'
+        attr_node.inputs["Name"].default_value = "conc"
+
+        color_ramp = nodes.new("ShaderNodeValToRGB")
+        color_ramp.color_ramp.elements[0].color = (0, 0, 1, 0.02)
+        color_ramp.color_ramp.elements[1].color = (1, 0, 0, 0.02)
+
+        store_color_node = nodes.new("GeometryNodeStoreNamedAttribute")
+        store_color_node.data_type = 'FLOAT_COLOR'
+        store_color_node.domain = 'POINT'
+        store_color_node.inputs["Name"].default_value = "color"
+
+        instance_node = nodes.new("GeometryNodeInstanceOnPoints")
+        cube_obj = self._get_or_create_cube()
+        obj_info = nodes.new("GeometryNodeObjectInfo")
+        obj_info.inputs["Object"].default_value = cube_obj
+
+        realize_node = nodes.new("GeometryNodeRealizeInstances")
+
+        set_material_node = nodes.new("GeometryNodeSetMaterial")
+        set_material_node.inputs["Material"].default_value = self._get_or_create_material()
+
+        links.new(input_node.outputs["Geometry"], store_color_node.inputs["Geometry"])
+        links.new(attr_node.outputs["Attribute"], color_ramp.inputs["Fac"])
+        links.new(color_ramp.outputs["Color"], store_color_node.inputs["Value"])  # FIXED connection here
+        links.new(store_color_node.outputs["Geometry"], instance_node.inputs["Points"])
+        links.new(obj_info.outputs["Geometry"], instance_node.inputs["Instance"])
+        links.new(instance_node.outputs["Instances"], realize_node.inputs["Geometry"])
+        links.new(realize_node.outputs["Geometry"], set_material_node.inputs["Geometry"])
+        links.new(set_material_node.outputs["Geometry"], output_node.inputs["Geometry"])
+
+        input_node.location = (-600, 0)
+        attr_node.location = (-400, 200)
+        color_ramp.location = (-200, 200)
+        store_color_node.location = (0, 100)
+        obj_info.location = (-400, -200)
+        instance_node.location = (200, 0)
+        realize_node.location = (400, 0)
+        set_material_node.location = (600, 0)
+        output_node.location = (800, 0)
+
+
+    def _get_or_create_material(self):
+        mat_name = "ConcMaterial"
+        mat = bpy.data.materials.get(mat_name)
+        if mat is None:
+            mat = bpy.data.materials.new(mat_name)
+            mat.use_nodes = True
+            bsdf = mat.node_tree.nodes["Principled BSDF"]
+            mat.blend_method = 'BLEND'
+            mat.shadow_method = 'HASHED'
+
+            # Vertex color attribute
+            attribute_node = mat.node_tree.nodes.new("ShaderNodeAttribute")
+            attribute_node.attribute_name = "color"
+
+            # Connect attribute color to BSDF
+            mat.node_tree.links.new(attribute_node.outputs["Color"], bsdf.inputs["Base Color"])
+            mat.node_tree.links.new(attribute_node.outputs["Alpha"], bsdf.inputs["Alpha"])
+        return mat
+
+
+    def _get_or_create_cube(self):
+        obj = bpy.data.objects.get("CubeInstance")
+        if obj is None:
+            bpy.ops.mesh.primitive_cube_add(size=1)
+            obj = bpy.context.active_object
+            obj.name = "CubeInstance"
+            obj.hide_render = True
+            obj.hide_viewport = True
+
+            # Optimize cube geometry
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.delete(type='ONLY_FACE')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.edge_face_add()
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        return obj
+
 
 
 class StopHandler(Handler):
@@ -197,7 +354,7 @@ class RemeshHandler(Handler):
             cell.cloth_mod.point_cache.frame_start = scene.frame_current
 
 
-class DiffusionHandler(Handler):
+class MolecularHandler(Handler):
     """Handler for simulating diffusion of a substance in the grid in the scene.
 
     Args:
@@ -216,16 +373,21 @@ class DiffusionHandler(Handler):
         self.get_diffsystem().build_kdtree()
 
     def run(self, scene, depsgraph) -> None:
-        self.get_diffsystem().simulate_diffusion()
+        for mol in self.get_diffsystem().molecules:
+            self.get_diffsystem().simulate_diffusion(mol)
 
+            for cell in self.get_cells():
+                # cell.sense(mol=mol)
+                # cell.secrete(mol=mol)
+                cell.update_physics_with_molecules(mol=mol)
 
 class NetworkHandler(Handler):
     """Handler for gene regulatory networks."""
 
     def run(self, scene, despgraph):
         for cell in self.get_cells():
-            cell.step_grn(self.get_diffsystem())
-
+            cell.step_grn(dt=self.dt)
+            cell.update_physics_with_grn()
 
 class RecenterHandler(Handler):
     """Handler for updating cell origin and location of
@@ -340,7 +502,7 @@ class RandomMotionHandler(Handler):
 
 
 """Possible properties by which cells are colored."""
-Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE"])
+Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE", "MOLECULE"])
 
 """Color map for the random cell colorizer."""
 COLORS = [
@@ -384,12 +546,12 @@ class ColorizeHandler(Handler):
     def __init__(
         self,
         colorizer: Colorizer = Colorizer.PRESSURE,
-        gene: Gene | str = None,
+        metabolite: Gene | Molecule | str = None,
         range: tuple | None = None,
     ):
 
         self.colorizer = colorizer
-        self.gene = gene
+        self.metabolite = metabolite
         self.range = range
         self.color_map = {}
         self.color_counter = 0
@@ -423,23 +585,28 @@ class ColorizeHandler(Handler):
 
         property_values = None
         if self.colorizer != Colorizer.RANDOM:
-            property_values = {
-                Colorizer.PRESSURE: np.array([
+            if self.colorizer == Colorizer.PRESSURE:
+                property_values = np.array([
                     cell.pressure if (cell.cloth_mod and
                                     hasattr(cell.cloth_mod, 'settings'))
                     else 0.0 for cell in cells
-                ]),
-                Colorizer.VOLUME: np.array([cell.volume() for cell in cells]),
-                Colorizer.GENE: (np.array([cell.metabolites[self.gene]
+                ])
+            elif self.colorizer == Colorizer.VOLUME:
+                property_values = np.array([cell.volume() for cell in cells])
+            elif self.colorizer == Colorizer.GENE:
+                property_values = (np.array([cell.gene_concs[self.metabolite]
                                          for cell in cells])
-                                if self.gene else np.array([])),
-            }.get(self.colorizer, None)
+                                if self.metabolite else np.array([]))
+            elif self.colorizer == Colorizer.MOLECULE:
+                property_values = (np.array([cell.molecule_concs[self.metabolite]
+                                          for cell in cells])
+                                 if self.metabolite and all(hasattr(c, 'diffsys') and c.diffsys is not None for c in cells) else np.array([]))
+            else:
+                print(f"Error: Invalid colorizer type: {self.colorizer}")
+                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, MOLECULE, or RANDOM.")
 
             if property_values is not None:
                 values = self._scale(property_values)
-            else:
-                print(f"Error: Invalid colorizer type: {self.colorizer}")
-                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, or RANDOM.")
         else:
             # Assign colors in a deterministic sequence from the fixed palette
             for cell in cells:

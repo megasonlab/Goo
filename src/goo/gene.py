@@ -6,7 +6,8 @@ import roadrunner
 from mathutils import Vector
 from typing_extensions import override
 
-from .molecule import DiffusionSystem
+
+# from .molecule import DiffusionSystem
 
 
 class Gene:
@@ -170,15 +171,15 @@ class RoadRunnerEngine(CircuitEngine):
         result = rr.simulate(0, dt, iter)
         self.result = result
 
-    def _get_model_full(self, metabolite_concs: dict[Gene, float]) -> str:
+    def _get_model_full(self, gene_concs: dict[Gene, float]) -> str:
         """Encodes the entire model, including metabolites,
         into a string representation to be fed into the Roadrunner solver."""
         prefix = "model cell"
         suffix = "end"
         gene_levels = "\n".join(
             [
-                f"{metabolite} = {level}"
-                for metabolite, level in metabolite_concs.items()
+                f"{gene} = {level}"
+                for gene, level in gene_concs.items()
             ]
         )
         return "\n".join([prefix, self.model, gene_levels, suffix])
@@ -202,15 +203,15 @@ class GeneRegulatoryNetwork:
     """
     def __init__(
         self,
-        concs: dict = {},
+        gene_concs: dict = {},
         circuit_engine: CircuitEngine = None,
     ):
-        self.concs = concs
+        self.gene_concs = gene_concs
         self._circuit_engine = circuit_engine if circuit_engine else RoadRunnerEngine()
 
     def copy(self) -> "GeneRegulatoryNetwork":
         grn = GeneRegulatoryNetwork(
-            self.concs.copy(),
+            self.gene_concs.copy(),
             self._circuit_engine.copy(),
         )
         return grn
@@ -221,34 +222,34 @@ class GeneRegulatoryNetwork:
 
     def update_concs(
         self,
-        diffusion_system: DiffusionSystem = None,
+        # diffusion_system: DiffusionSystem = None,
         center: Vector = None,
         radius: float | None = None,
         dt=1,
     ):
         """Update network concentrations based on underlying diffusion systems,
-        cell center and radius."""
-        if diffusion_system is not None:
-            if center is None or radius is None:
-                raise ValueError(
-                    "If there is a diffusion system, center or radius \
-                        must be supplied as arguments."
-                )
-            self.update_signaling_concs(diffusion_system, center, radius)
-        self.update_metabolite_concs(dt=dt)
+        # cell center and radius."""
+        # if diffusion_system is not None:
+        #     if center is None or radius is None:
+        #         raise ValueError(
+        #             "If there is a diffusion system, center or radius \
+        #                 must be supplied as arguments."
+        #         )
+            # self.update_signaling_concs(diffusion_system, center, radius)
+        self.update_gene_concs(dt=dt)
 
-    def update_metabolite_concs(self, iter=5, dt=1):
+    def update_gene_concs(self, iter=5, dt=1):
         """Update network concentrations based on the model."""
-        self._circuit_engine.step(self.concs, iter=iter, dt=dt)
+        self._circuit_engine.step(self.gene_concs, iter=iter, dt=dt)
         new_concs = self._circuit_engine.retrieve_concs()
-        self.concs.update(new_concs)
+        self.gene_concs.update(new_concs)
 
-    def update_signaling_concs(
-        self,
-        diffusion_system: DiffusionSystem,
-        center: Vector,
-        radius: float
-    ):
-        """Update network concentrations based on the underlying diffusion system."""
-        signaling_concs = diffusion_system.get_ball_concentrations(center, radius)
-        self.concs.update(signaling_concs)
+    # def update_signaling_concs(
+    #     self,
+    #     diffusion_system: DiffusionSystem,
+    #     center: Vector,
+    #     radius: float
+    # ):
+    #     """Update gene levels based on the underlying diffusion system."""
+    #     signaling_concs = diffusion_system.get_ball_concentrations(center, radius)
+    #     self.gene_concs.update(signaling_concs)
