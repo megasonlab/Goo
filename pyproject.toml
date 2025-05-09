@@ -55,6 +55,14 @@ blender45 = [
     "fake-bpy-module==20240524"
 ]
 
+# Visualization tools
+viz = [
+    "streamlit>=1.32.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+]
+
 # Development tools
 dev = [
     "pytest==8.3.4",

@@ -154,6 +154,10 @@ class BooleanDivisionLogic(DivisionLogic):
         daughter = Cell(bpy.context.selected_objects[0])
         daughter.obj.select_set(False)
 
+        # Copy mother's pressure to daughter
+        if mother.cloth_mod and daughter.cloth_mod:
+            daughter.pressure = mother.pressure
+
         daughter.name = mother.name + ".1"
         mother.name = mother.name + ".0"
 
