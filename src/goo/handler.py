@@ -861,9 +861,16 @@ class DataExporter(Handler):
             cell_grp.attrs["name"] = cell.name
             cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
             cell_grp.create_dataset("volume", data=float(cell.volume()))
+            cell_grp.create_dataset("division_frame", data=float(cell.division_frame))
 
             if cell.physics_enabled:
                 cell_grp.create_dataset("pressure", data=float(cell.pressure))
+
+            # shape features
+            cell_grp.create_dataset("aspect_ratio", data=float(cell.aspect_ratio()))
+            cell_grp.create_dataset("sphericity", data=float(cell.sphericity()))
+            cell_grp.create_dataset("compactness", data=float(cell.compactness()))
+            cell_grp.create_dataset("sav_ratio", data=float(cell.sav_ratio()))
 
             # Gene expression data - store as direct datasets
             if hasattr(cell, 'gene_concs') and cell.gene_concs:

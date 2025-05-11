@@ -49,6 +49,7 @@ class Cell(BlenderObject):
         self.diffsys_hooks = []
 
         self.just_divided = False
+        self.division_frame = None
         self.physics_enabled = False
         self.mod_settings = []
 
@@ -546,6 +547,8 @@ class Cell(BlenderObject):
         mother, daughter = division_logic.make_divide(self)
         mother.just_divided = True
         daughter.just_divided = True
+        mother.division_frame = bpy.context.scene.frame_current
+        daughter.division_frame = bpy.context.scene.frame_current
 
         return mother, daughter
 
