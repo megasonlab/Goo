@@ -8,12 +8,19 @@ The data structure that is exported is a HDF5 file, and is structured as follows
 .. code-block::
 
    frame_001/
+   ├── time (float)
    ├── cells/
    │   ├── cell_001/
    │   │   ├── name (attribute)
-   │   │   ├── loc (dataset)
+   │   │   ├── loc (tuple)
    │   │   ├── volume (float)
    │   │   ├── pressure (float)
+   │   │   ├── division_frame (float)
+   │   │   ├── force_loc (tuple)
+   │   │   ├── aspect_ratio (float)
+   │   │   ├── sphericity (float)
+   │   │   ├── compactness (float)
+   │   │   ├── sav_ratio (float)
    │   │   ├── gene_x_conc (float)
    │   │   ├── gene_y_conc (float)
    │   │   ├── ...

@@ -38,6 +38,7 @@ class Cell(BlenderObject):
         self._color: tuple[float, float, float] = None
 
         self.direction = Vector()
+        self.adhesion_force: AdhesionForce = None
         self.adhesion_forces: list[AdhesionForce] = []
         self.motion_force: MotionForce = None
         self.effectors: ForceCollection = None
@@ -652,8 +653,6 @@ class Cell(BlenderObject):
             center=self.COM(),
             radius=self.radius(),
         )
-        # print(coords, concentrations)
-        print(self.diffsys.get_total_ball_concentrations(mol=mol, center=self.COM(), radius=self.radius()))
         return coords, concentrations
 
     def secrete(self, mol: Molecule):
@@ -1126,9 +1125,10 @@ class CellPattern:
         homo_adhesion_collection.add(homo_adhesion)
 
         self._cell.add_force(homo_adhesion)
+        self._cell.adhesion_force = homo_adhesion
+        print(self._cell.adhesion_force.name)
         self._cell.add_effector(homo_adhesion_collection)
 
-        # print(hetero_adhesion_strengths.keys(), hetero_adhesion_collections.keys())
         for celltype in hetero_adhesion_strengths.keys():
             strength = hetero_adhesion_strengths[celltype]
             incoming, outgoing = hetero_adhesion_collections[celltype]

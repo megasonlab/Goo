@@ -406,8 +406,12 @@ class RecenterHandler(Handler):
             and hasattr(cell.cloth_mod.settings, 'uniform_pressure_force')
         ]
         average_pressure = np.mean(valid_pressures) if valid_pressures else 0
-        _, sphericities, _, _ = _shape_features(cells)
-        average_sphericity = np.mean(sphericities)
+        sphericities = []
+        for cell in cells:
+            sphericity = cell.sphericity()
+            if sphericity is not None:
+                sphericities.append(sphericity)
+        average_sphericity = np.mean(sphericities) if sphericities else 0
 
         bpy.context.scene.world["Cell#"] = cell_number
         bpy.context.scene.world["Avg Volume"] = average_volume
@@ -426,6 +430,7 @@ class RecenterHandler(Handler):
                         continue
                     force.min_dist = cell_size - 0.4
                     force.max_dist = cell_size + 0.4
+                    force.loc = cell.loc
 
             # Update motion force if it exists
             if hasattr(cell, 'motion_force') and cell.motion_force:
@@ -691,7 +696,7 @@ def _contact_area(
 
 
 @staticmethod
-def _contact_areas(cells: list[Cell], threshold=4) -> tuple[dict, dict]:
+def _contact_areas(cells: list[Cell], threshold=5) -> tuple[dict, dict]:
     """Calculate the pairwise contact areas between a list of cells.
 
     Contact is calculated heuristically by first screening cells that are within
@@ -814,15 +819,16 @@ class DataFlag(Flag):
     PRESSURES = auto()
     CONTACT_AREAS = auto()
     SHAPE_FEATURES = auto()
-    GRID = auto()
     CELL_CONCENTRATIONS = auto()
+    GENES = auto()
+    GRID = auto() # larger overhead for each frame, so not saved by default
 
-    DEFAULT = TIMES | DIVISIONS | MOTION_PATH | FORCE_PATH | VOLUMES | PRESSURES | CONTACT_AREAS | SHAPE_FEATURES | CELL_CONCENTRATIONS
-    ALL = _all()
+    DEFAULT = TIMES | DIVISIONS | MOTION_PATH | FORCE_PATH | VOLUMES | PRESSURES | CONTACT_AREAS | SHAPE_FEATURES | CELL_CONCENTRATIONS | GENES
+    ALL = _all() # includes grid concentrations
 
 
 class DataExporter(Handler):
-    def __init__(self, path, options=DataFlag.DEFAULT):
+    def __init__(self, path=None, options=DataFlag.DEFAULT):
         self.path = path
         self.h5file = None
         self.options = options
@@ -834,62 +840,190 @@ class DataExporter(Handler):
         self.dt = dt
         self.time_start = datetime.now()
 
-        if self.path:
-            if os.path.exists(self.path):
-                os.remove(self.path)
-            self.h5file = h5py.File(self.path, 'w')
-            self.h5file.attrs['seed'] = bpy.context.scene["seed"]
+        # Use provided path or create one based on render filepath
+        if self.path is None:
+            render_path = bpy.context.scene.render.filepath
+            render_dir = os.path.dirname(render_path)
+            os.makedirs(render_dir, exist_ok=True)
+            self.path = os.path.join(render_dir, "data.h5")
+
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        self.h5file = h5py.File(self.path, 'w')
+        self.h5file.attrs['seed'] = bpy.context.scene["seed"]
+
+    # def run(self, scene, depsgraph):
+    #     frame_number = scene.frame_current
+    #     frame_name = f"frame_{frame_number:03d}"
+    #     frame_grp = self.h5file.create_group(frame_name)
+
+    #     # Add frame metadata
+    #     frame_grp.attrs["frame"] = frame_number
+
+    #     if self.options & DataFlag.TIMES:
+    #         frame_grp.attrs["time"] = (datetime.now() - self.time_start).total_seconds()
+
+    #     # Create cells group
+    #     cells_grp = frame_grp.create_group("cells")
+
+    #     # Process each cell
+    #     for cell_idx, cell in enumerate(self.get_cells(), 1):
+    #         print(cell.name)
+    #         # cell_name = f"cell_{cell_idx:03d}"
+    #         cell_grp = cells_grp.create_group(cell.name)
+    #         # Basic cell properties
+    #         cell_grp.attrs["name"] = cell.name
+    #         cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
+    #         if self.options & DataFlag.VOLUMES:
+    #             cell_grp.create_dataset("volume", data=float(cell.volume()))
+    #         if cell.physics_enabled and (self.options & DataFlag.PRESSURES):
+    #             cell_grp.create_dataset("pressure", data=float(cell.pressure))
+    #         if self.options & DataFlag.DIVISIONS and hasattr(cell, 'division_frame') and cell.division_frame is not None:
+    #             cell_grp.create_dataset("division_frame", data=float(cell.division_frame))
+    #         if self.options & DataFlag.FORCE_PATH:
+    #             cell_grp.create_dataset("force_loc", data=np.array(cell.adhesion_force.loc, dtype=np.float64))
+
+    #         # shape features
+    #         if self.options & DataFlag.SHAPE_FEATURES:
+    #             cell_grp.create_dataset("aspect_ratio", data=float(cell.aspect_ratio()))
+    #             cell_grp.create_dataset("sphericity", data=float(cell.sphericity()))
+    #             cell_grp.create_dataset("compactness", data=float(cell.compactness()))
+    #             cell_grp.create_dataset("sav_ratio", data=float(cell.sav_ratio()))
+
+    #         # Gene expression data - store as direct datasets
+    #         if self.options & DataFlag.GENES:
+    #             if hasattr(cell, 'gene_concs') and cell.gene_concs:
+    #                 for gene, gene_conc in cell.gene_concs.items():
+    #                     gene_name = gene.name if hasattr(gene, 'name') else str(gene)
+    #                     cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+
+    #         # Molecular concentrations - store as direct datasets
+    #         if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
+    #             for mol, mol_conc in cell.molecule_concs.items():
+    #                 mol_name = mol.name if hasattr(mol, 'name') else str(mol)
+    #                 # Handle both single values and tuples
+    #                 if isinstance(mol_conc, tuple | list):
+    #                     # If it's a tuple with (name, value), use only the value
+    #                     if len(mol_conc) == 2 and isinstance(mol_conc[1], int | float):
+    #                         cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
+    #                     else:
+    #                         cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
+    #                 elif isinstance(mol_conc, int | float):
+    #                     cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
+    #                 else:
+    #                     print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
+
+    #     # Grid concentration data
+    #     if self.options & DataFlag.GRID:
+    #         grid_grp = frame_grp.create_group("concentration_grid")
+    #         for mol in self.get_diffsystem().molecules:
+    #             mol_name = mol.name if hasattr(mol, 'name') else str(mol)
+    #             mol_grp = grid_grp.create_group(mol_name)
+
+    #             # Store grid dimensions
+    #             mol_grp.create_dataset("dimensions",
+    #                                  data=np.array(self.get_diffsystem().grid_size, dtype=np.int32))
+    #             print(f"Grid dimensions for {mol_name}: {self.get_diffsystem().grid_size}")
+
+    #             # Store concentration values
+    #             mol_grp.create_dataset("values",
+    #                                  data=np.array(self.get_diffsystem()._grid_concentrations[mol_name],
+    #                                              dtype=np.float64))
+
+    #     if self.options & DataFlag.CONTACT_AREAS:
+    #         contact_areas, ratios = _contact_areas(self.get_cells())
+    #         areas_grp = frame_grp.create_group("contact_areas")
+    #         for cell_name, contact_list in contact_areas.items():
+    #             cell_grp = areas_grp.create_group(cell_name)
+    #             # Convert list of tuples to structured array
+    #             if contact_list and contact_list[0][0] is not None:
+    #                 dtype = [('cell', 'S50'), ('area', float)]
+    #                 data = np.array(contact_list, dtype=dtype)
+    #                 cell_grp.create_dataset("areas", data=data)
+    #             else:
+    #                 # If no contacts, create empty dataset with same structure
+    #                 dtype = [('cell', 'S50'), ('area', float)]
+    #                 data = np.array([('none', 0.0)], dtype=dtype)
+    #                 cell_grp.create_dataset("areas", data=data)
+
+    #         ratios_grp = frame_grp.create_group("contact_ratios")
+    #         for cell_name, contact_list in ratios.items():
+    #             cell_grp = ratios_grp.create_group(cell_name)
+    #             # Convert list of tuples to structured array
+    #             if contact_list and contact_list[0][0] is not None:
+    #                 dtype = [('cell', 'S50'), ('ratio', float)]
+    #                 data = np.array(contact_list, dtype=dtype)
+    #                 cell_grp.create_dataset("ratios", data=data)
+    #             else:
+    #                 # If no contacts, create empty dataset with same structure
+    #                 dtype = [('cell', 'S50'), ('ratio', float)]
+    #                 data = np.array([('none', 0.0)], dtype=dtype)
+    #                 cell_grp.create_dataset("ratios", data=data)
 
     def run(self, scene, depsgraph):
         frame_number = scene.frame_current
         frame_name = f"frame_{frame_number:03d}"
         frame_grp = self.h5file.create_group(frame_name)
-
-        # Add frame metadata
         frame_grp.attrs["frame"] = frame_number
         frame_grp.attrs["time"] = (datetime.now() - self.time_start).total_seconds()
 
-        # Create cells group
         cells_grp = frame_grp.create_group("cells")
+        contact_areas = {}
+        ratios = {}
 
-        # Process each cell
         for cell_idx, cell in enumerate(self.get_cells(), 1):
-            cell_name = f"cell_{cell_idx:03d}"
-            cell_grp = cells_grp.create_group(cell_name)
-
-            # Basic cell properties
+            cell_grp = cells_grp.create_group(cell.name)
             cell_grp.attrs["name"] = cell.name
             cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
-            cell_grp.create_dataset("volume", data=float(cell.volume()))
-            cell_grp.create_dataset("division_frame", data=float(cell.division_frame))
 
-            if cell.physics_enabled:
-                cell_grp.create_dataset("pressure", data=float(cell.pressure))
+            # Initialize all potential datasets with defaults
+            if self.options & DataFlag.VOLUMES:
+                cell_grp.create_dataset("volume", data=np.nan)
+            if self.options & DataFlag.PRESSURES:
+                cell_grp.create_dataset("pressure", data=np.nan)
+            if self.options & DataFlag.DIVISIONS:
+                cell_grp.create_dataset("division_frame", data=np.nan)
+            if self.options & DataFlag.FORCE_PATH:
+                cell_grp.create_dataset("force_loc", data=np.full(3, np.nan, dtype=np.float64))
+            if self.options & DataFlag.SHAPE_FEATURES:
+                cell_grp.create_dataset("aspect_ratio", data=np.nan)
+                cell_grp.create_dataset("sphericity", data=np.nan)
+                cell_grp.create_dataset("compactness", data=np.nan)
+                cell_grp.create_dataset("sav_ratio", data=np.nan)
 
-            # shape features
-            cell_grp.create_dataset("aspect_ratio", data=float(cell.aspect_ratio()))
-            cell_grp.create_dataset("sphericity", data=float(cell.sphericity()))
-            cell_grp.create_dataset("compactness", data=float(cell.compactness()))
-            cell_grp.create_dataset("sav_ratio", data=float(cell.sav_ratio()))
+            # Populate datasets only if data is present
+            if self.options & DataFlag.VOLUMES:
+                cell_grp["volume"][...] = float(cell.volume())
+            if cell.physics_enabled and (self.options & DataFlag.PRESSURES):
+                cell_grp["pressure"][...] = float(cell.pressure)
+            if self.options & DataFlag.DIVISIONS and getattr(cell, 'division_frame', None) is not None:
+                cell_grp["division_frame"][...] = float(cell.division_frame)
+            if self.options & DataFlag.FORCE_PATH:
+                cell_grp["force_loc"][...] = np.array(cell.motion_force.loc, dtype=np.float64)
 
-            # Gene expression data - store as direct datasets
-            if hasattr(cell, 'gene_concs') and cell.gene_concs:
-                for gene, gene_conc in cell.gene_concs.items():
-                    gene_name = gene.name if hasattr(gene, 'name') else str(gene)
-                    cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+            if self.options & DataFlag.SHAPE_FEATURES:
+                cell_grp["aspect_ratio"][...] = float(cell.aspect_ratio())
+                cell_grp["sphericity"][...] = float(cell.sphericity())
+                cell_grp["compactness"][...] = float(cell.compactness())
+                cell_grp["sav_ratio"][...] = float(cell.sav_ratio())
 
-            # Molecular concentrations - store as direct datasets
+            if self.options & DataFlag.GENES:
+                if hasattr(cell, 'gene_concs') and cell.gene_concs:
+                    for gene, gene_conc in cell.gene_concs.items():
+                        gene_name = gene.name if hasattr(gene, 'name') else str(gene)
+                        cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+
             if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
                 for mol, mol_conc in cell.molecule_concs.items():
                     mol_name = mol.name if hasattr(mol, 'name') else str(mol)
-                    # Handle both single values and tuples
-                    if isinstance(mol_conc, tuple | list):
-                        # If it's a tuple with (name, value), use only the value
-                        if len(mol_conc) == 2 and isinstance(mol_conc[1], int | float):
+                    if isinstance(mol_conc, (tuple, list)):
+                        if len(mol_conc) == 2 and isinstance(mol_conc[1], (int, float)):
                             cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
                         else:
                             cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
-                    elif isinstance(mol_conc, int | float):
+                    elif isinstance(mol_conc, (int, float)):
                         cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
                     else:
                         print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
@@ -900,16 +1034,30 @@ class DataExporter(Handler):
             for mol in self.get_diffsystem().molecules:
                 mol_name = mol.name if hasattr(mol, 'name') else str(mol)
                 mol_grp = grid_grp.create_group(mol_name)
+                mol_grp.create_dataset("dimensions", data=np.array(self.get_diffsystem().grid_size, dtype=np.int32))
+                mol_grp.create_dataset("values", data=np.array(self.get_diffsystem()._grid_concentrations[mol_name], dtype=np.float64))
 
-                # Store grid dimensions
-                mol_grp.create_dataset("dimensions",
-                                     data=np.array(self.get_diffsystem().grid_size, dtype=np.int32))
-                print(f"Grid dimensions for {mol_name}: {self.get_diffsystem().grid_size}")
+        # Contact area and ratios
+        if self.options & DataFlag.CONTACT_AREAS:
+            contact_areas, ratios = _contact_areas(self.get_cells())
 
-                # Store concentration values
-                mol_grp.create_dataset("values",
-                                     data=np.array(self.get_diffsystem()._grid_concentrations[mol_name],
-                                                 dtype=np.float64))
+            areas_grp = frame_grp.create_group("contact_areas")
+            dtype_areas = [('cell', 'S50'), ('area', float)]
+            for cell_name in cells_grp.keys():
+                cell_area_list = contact_areas.get(cell_name, [])
+                if not cell_area_list:
+                    cell_area_list = [('none', 0.0)]
+                data = np.array(cell_area_list, dtype=dtype_areas)
+                areas_grp.create_group(cell_name).create_dataset("areas", data=data)
+
+            ratios_grp = frame_grp.create_group("contact_ratios")
+            dtype_ratios = [('cell', 'S50'), ('ratio', float)]
+            for cell_name in cells_grp.keys():
+                cell_ratio_list = ratios.get(cell_name, [])
+                if not cell_ratio_list:
+                    cell_ratio_list = [('none', 0.0)]
+                data = np.array(cell_ratio_list, dtype=dtype_ratios)
+                ratios_grp.create_group(cell_name).create_dataset("ratios", data=data)
 
     def close(self):
         if self.h5file:
