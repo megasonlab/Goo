@@ -189,7 +189,13 @@ class ConcentrationVisualizationHandler(Handler):
             mat.use_nodes = True
             bsdf = mat.node_tree.nodes["Principled BSDF"]
             mat.blend_method = 'BLEND'
-            mat.shadow_method = 'HASHED'
+            
+            # Handle shadow method for different Blender versions
+            if hasattr(mat, 'shadow_method'):
+                mat.shadow_method = 'HASHED'
+            else:
+                # For Blender 4.5+, use the new shadow method
+                mat.shadow_method = 'CLIP'  # or 'NONE' depending on your needs
 
             # Vertex color attribute
             attribute_node = mat.node_tree.nodes.new("ShaderNodeAttribute")
@@ -207,8 +213,11 @@ class ConcentrationVisualizationHandler(Handler):
             bpy.ops.mesh.primitive_cube_add(size=1)
             obj = bpy.context.active_object
             obj.name = "CubeInstance"
-            obj.hide_render = True
-            obj.hide_viewport = True
+
+            # Ensure object is selected and active before changing mode
+            bpy.ops.object.select_all(action='DESELECT')
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
 
             # Optimize cube geometry
             bpy.ops.object.mode_set(mode='EDIT')
@@ -216,6 +225,10 @@ class ConcentrationVisualizationHandler(Handler):
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.edge_face_add()
             bpy.ops.object.mode_set(mode='OBJECT')
+
+            # Hide the object after we're done editing it
+            obj.hide_render = True
+            obj.hide_viewport = True
 
         return obj
 
@@ -745,8 +758,6 @@ def _contact_areas(cells: list[Cell], threshold=5) -> tuple[dict, dict]:
             areas[cell.name] = [(None, 0.0)]
         if not ratios[cell.name]:
             ratios[cell.name] = [(None, 0.0)]
-
-    print(f"Areas: {areas}")
     return areas, ratios
 
 
@@ -853,114 +864,6 @@ class DataExporter(Handler):
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         self.h5file = h5py.File(self.path, 'w')
         self.h5file.attrs['seed'] = bpy.context.scene["seed"]
-
-    # def run(self, scene, depsgraph):
-    #     frame_number = scene.frame_current
-    #     frame_name = f"frame_{frame_number:03d}"
-    #     frame_grp = self.h5file.create_group(frame_name)
-
-    #     # Add frame metadata
-    #     frame_grp.attrs["frame"] = frame_number
-
-    #     if self.options & DataFlag.TIMES:
-    #         frame_grp.attrs["time"] = (datetime.now() - self.time_start).total_seconds()
-
-    #     # Create cells group
-    #     cells_grp = frame_grp.create_group("cells")
-
-    #     # Process each cell
-    #     for cell_idx, cell in enumerate(self.get_cells(), 1):
-    #         print(cell.name)
-    #         # cell_name = f"cell_{cell_idx:03d}"
-    #         cell_grp = cells_grp.create_group(cell.name)
-    #         # Basic cell properties
-    #         cell_grp.attrs["name"] = cell.name
-    #         cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
-    #         if self.options & DataFlag.VOLUMES:
-    #             cell_grp.create_dataset("volume", data=float(cell.volume()))
-    #         if cell.physics_enabled and (self.options & DataFlag.PRESSURES):
-    #             cell_grp.create_dataset("pressure", data=float(cell.pressure))
-    #         if self.options & DataFlag.DIVISIONS and hasattr(cell, 'division_frame') and cell.division_frame is not None:
-    #             cell_grp.create_dataset("division_frame", data=float(cell.division_frame))
-    #         if self.options & DataFlag.FORCE_PATH:
-    #             cell_grp.create_dataset("force_loc", data=np.array(cell.adhesion_force.loc, dtype=np.float64))
-
-    #         # shape features
-    #         if self.options & DataFlag.SHAPE_FEATURES:
-    #             cell_grp.create_dataset("aspect_ratio", data=float(cell.aspect_ratio()))
-    #             cell_grp.create_dataset("sphericity", data=float(cell.sphericity()))
-    #             cell_grp.create_dataset("compactness", data=float(cell.compactness()))
-    #             cell_grp.create_dataset("sav_ratio", data=float(cell.sav_ratio()))
-
-    #         # Gene expression data - store as direct datasets
-    #         if self.options & DataFlag.GENES:
-    #             if hasattr(cell, 'gene_concs') and cell.gene_concs:
-    #                 for gene, gene_conc in cell.gene_concs.items():
-    #                     gene_name = gene.name if hasattr(gene, 'name') else str(gene)
-    #                     cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
-
-    #         # Molecular concentrations - store as direct datasets
-    #         if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
-    #             for mol, mol_conc in cell.molecule_concs.items():
-    #                 mol_name = mol.name if hasattr(mol, 'name') else str(mol)
-    #                 # Handle both single values and tuples
-    #                 if isinstance(mol_conc, tuple | list):
-    #                     # If it's a tuple with (name, value), use only the value
-    #                     if len(mol_conc) == 2 and isinstance(mol_conc[1], int | float):
-    #                         cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
-    #                     else:
-    #                         cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
-    #                 elif isinstance(mol_conc, int | float):
-    #                     cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
-    #                 else:
-    #                     print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
-
-    #     # Grid concentration data
-    #     if self.options & DataFlag.GRID:
-    #         grid_grp = frame_grp.create_group("concentration_grid")
-    #         for mol in self.get_diffsystem().molecules:
-    #             mol_name = mol.name if hasattr(mol, 'name') else str(mol)
-    #             mol_grp = grid_grp.create_group(mol_name)
-
-    #             # Store grid dimensions
-    #             mol_grp.create_dataset("dimensions",
-    #                                  data=np.array(self.get_diffsystem().grid_size, dtype=np.int32))
-    #             print(f"Grid dimensions for {mol_name}: {self.get_diffsystem().grid_size}")
-
-    #             # Store concentration values
-    #             mol_grp.create_dataset("values",
-    #                                  data=np.array(self.get_diffsystem()._grid_concentrations[mol_name],
-    #                                              dtype=np.float64))
-
-    #     if self.options & DataFlag.CONTACT_AREAS:
-    #         contact_areas, ratios = _contact_areas(self.get_cells())
-    #         areas_grp = frame_grp.create_group("contact_areas")
-    #         for cell_name, contact_list in contact_areas.items():
-    #             cell_grp = areas_grp.create_group(cell_name)
-    #             # Convert list of tuples to structured array
-    #             if contact_list and contact_list[0][0] is not None:
-    #                 dtype = [('cell', 'S50'), ('area', float)]
-    #                 data = np.array(contact_list, dtype=dtype)
-    #                 cell_grp.create_dataset("areas", data=data)
-    #             else:
-    #                 # If no contacts, create empty dataset with same structure
-    #                 dtype = [('cell', 'S50'), ('area', float)]
-    #                 data = np.array([('none', 0.0)], dtype=dtype)
-    #                 cell_grp.create_dataset("areas", data=data)
-
-    #         ratios_grp = frame_grp.create_group("contact_ratios")
-    #         for cell_name, contact_list in ratios.items():
-    #             cell_grp = ratios_grp.create_group(cell_name)
-    #             # Convert list of tuples to structured array
-    #             if contact_list and contact_list[0][0] is not None:
-    #                 dtype = [('cell', 'S50'), ('ratio', float)]
-    #                 data = np.array(contact_list, dtype=dtype)
-    #                 cell_grp.create_dataset("ratios", data=data)
-    #             else:
-    #                 # If no contacts, create empty dataset with same structure
-    #                 dtype = [('cell', 'S50'), ('ratio', float)]
-    #                 data = np.array([('none', 0.0)], dtype=dtype)
-    #                 cell_grp.create_dataset("ratios", data=data)
 
     def run(self, scene, depsgraph):
         frame_number = scene.frame_current
@@ -1221,25 +1124,22 @@ class SliceExporter(Handler):
         bm.free()
         return np.array(points)
 
-    def points_to_volume(self, points: np.ndarray) -> np.ndarray:
-        """Convert point cloud to a 3D volume array with continuous surfaces.
+    def points_to_volume_with_labels(self, points: np.ndarray, labels: np.ndarray) -> np.ndarray:
+        grid_points = self.world_to_grid_coords(points).astype(int)
 
-        Args:
-            points: Array of points in world coordinates
+        # Clip to grid bounds
+        valid_mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
+        grid_points = grid_points[valid_mask]
+        labels = labels[valid_mask]
 
-        Returns:
-            3D volume array with continuous surfaces
-        """
-        # Convert points to grid coordinates
-        grid_points = self.world_to_grid_coords(points)
-        volume = np.zeros(self.resolution, dtype=np.float32)
-        grid_points = grid_points.astype(int)
-        mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
-        grid_points = grid_points[mask]
-        volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = 1.0
-        volume = ndimage.binary_dilation(volume, structure=np.ones((2,2,2)))
+        # Initialize label volume
+        volume = np.zeros(self.resolution, dtype=np.uint8)
+
+        # Assign each point's label (last one wins if overlap)
+        volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = labels
 
         return volume
+
 
     def downsample_volume(self, volume: np.ndarray) -> tuple[np.ndarray, tuple[float, float, float]]:
         """Downsample the volume array and adjust the scale accordingly.
@@ -1292,17 +1192,22 @@ class SliceExporter(Handler):
         visible_objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH'
                            and obj.visible_get()]
 
-        # Sample points from all meshes
         all_points = []
-        for obj in visible_objects:
+        all_labels = []
+        for idx, obj in enumerate(visible_objects, start=1):  # Start at 1 to reserve 0 for background
             points = self.sample_mesh_points(obj)
+            labels = np.full(len(points), idx, dtype=np.uint8)
             all_points.append(points)
+            all_labels.append(labels)
+
+        combined_points = np.vstack(all_points)
+        combined_labels = np.concatenate(all_labels)
 
         # Combine all points
         combined_points = np.vstack(all_points)
 
         # Convert to volume
-        volume = self.points_to_volume(combined_points)
+        volume = self.points_to_volume_with_labels(combined_points, combined_labels)
 
         # Create coordinate arrays based on scale
         z_coords = np.arange(self.resolution[0]) * self.scale[0]

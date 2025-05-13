@@ -1126,7 +1126,6 @@ class CellPattern:
 
         self._cell.add_force(homo_adhesion)
         self._cell.adhesion_force = homo_adhesion
-        print(self._cell.adhesion_force.name)
         self._cell.add_effector(homo_adhesion_collection)
 
         for celltype in hetero_adhesion_strengths.keys():
