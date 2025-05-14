@@ -1,5 +1,7 @@
 import goo
+from importlib import reload
 
+reload(goo)
 goo.reset_modules()
 goo.reset_scene()
 
