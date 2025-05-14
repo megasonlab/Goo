@@ -333,7 +333,7 @@ class Cell(BlenderObject):
         for force in self.adhesion_forces:
             force.loc = self.loc
 
-    def remesh(self, voxel_size: float = 0.7, smooth: bool = True) -> None:
+    def remesh(self, voxel_size: float = 0.4, smooth: bool = True) -> None:
         """Remesh the underlying mesh representation of the cell.
 
         Remeshing is done using the built-in `voxel_remesh()`.

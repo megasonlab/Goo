@@ -727,7 +727,7 @@ def _get_divisions(cells: list[Cell]) -> list[tuple[str, str, str]]:
 
 @staticmethod
 def _contact_area(
-    cell1: Cell, cell2: Cell, threshold=0.02
+    cell1: Cell, cell2: Cell, threshold=0.3
 ) -> tuple[float, float, float, float]:
     """Calculate the contact areas between two cells.
 
@@ -1005,6 +1005,7 @@ class DataExporter(Handler):
         # Contact area and ratios
         if self.options & DataFlag.CONTACT_AREAS:
             contact_areas, ratios = _contact_areas(self.get_cells())
+            print(f"contact_areas: {contact_areas}, ratios: {ratios}")
 
             areas_grp = frame_grp.create_group("contact_areas")
             dtype_areas = [('cell', 'S50'), ('area', float)]
