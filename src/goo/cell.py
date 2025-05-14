@@ -960,12 +960,41 @@ class CellType:
         for celltype, strength in hetero_adhesion_strengths.items():
             self.set_hetero_adhesion_strength(celltype, strength)
 
+        # Store molecule-property links for this cell type
+        self._molecule_property_links = []
+
+        # Store diffusion system for this cell type
+        self._diffsys = None
+
     @staticmethod
     def default_celltype() -> "CellType":
         """Get the default cell type."""
         if CellType._default_celltype is None:
             CellType._default_celltype = CellType("default")
         return CellType._default_celltype
+
+    @property
+    def diffsys(self):
+        """Get the diffusion system for this cell type."""
+        return self._diffsys
+
+    @diffsys.setter
+    def diffsys(self, diffsys):
+        """Set the diffusion system for this cell type and apply it to all cells.
+
+        Args:
+            diffsys: The diffusion system to set
+        """
+        self._diffsys = diffsys
+
+        # Apply to all existing cells
+        for cell in self.cells:
+            cell.diffsys = diffsys
+
+            # Re-apply molecule-property links since they need the diffusion system
+            if hasattr(self, '_molecule_property_links'):
+                for molecule, property in self._molecule_property_links:
+                    cell.link_molecule_to_property(molecule, property)
 
     def create_cell(
         self,
@@ -1020,6 +1049,15 @@ class CellType:
         cell.celltype = self
         cell.remesh()
 
+        # Apply diffusion system if one exists for this cell type
+        if self._diffsys is not None:
+            cell.diffsys = self._diffsys
+
+        # Apply any stored molecule-property links to the new cell
+        for molecule, property in self._molecule_property_links:
+            if hasattr(cell, 'diffsys') and cell.diffsys is not None:
+                cell.link_molecule_to_property(molecule, property)
+
         self.cells.append(cell)
         return cell
 
@@ -1038,6 +1076,24 @@ class CellType:
             incoming_collections,
             outgoing_collections,
         )
+
+    def link_molecule_to_property(self, molecule: Molecule, property):
+        """Link molecule to property for all cells of this type.
+
+        This will set up the link for all existing cells and any new cells created
+        from this cell type.
+
+        Args:
+            molecule: The molecule to link
+            property: The property to link the molecule to
+        """
+        # Store the link for future cells
+        self._molecule_property_links.append((molecule, property))
+
+        # Apply the link to all existing cells
+        for cell in self.cells:
+            if hasattr(cell, 'diffsys') and cell.diffsys is not None:
+                cell.link_molecule_to_property(molecule, property)
 
 
 class CellPattern:

@@ -60,6 +60,7 @@ class BisectDivisionLogic(DivisionLogic):
         d_mb = self._bisect(mother.obj_eval, com, axis, False, self.margin)
 
         daughter = mother.copy()
+        # daughter.diffsys = mother.diffsys
 
         mother.name = base_name + ".0"
         daughter.name = base_name + ".1"
@@ -323,10 +324,6 @@ class SizeDivisionHandler(DivisionHandler):
 
     @override
     def can_divide(self, cell: Cell):
-        # time = bpy.context.scene.frame_current * self.dt
-        # if "last_division_time" not in cell:
-        #     cell["last_division_time"] = time
-
         div_volume = np.random.normal(self.mu, self.sigma)
         return cell.volume() >= div_volume
 
