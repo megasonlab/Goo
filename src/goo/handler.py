@@ -189,7 +189,7 @@ class ConcentrationVisualizationHandler(Handler):
             mat.use_nodes = True
             bsdf = mat.node_tree.nodes["Principled BSDF"]
             mat.blend_method = 'BLEND'
-            
+
             # Handle shadow method for different Blender versions
             if hasattr(mat, 'shadow_method'):
                 mat.shadow_method = 'HASHED'
@@ -213,6 +213,8 @@ class ConcentrationVisualizationHandler(Handler):
             bpy.ops.mesh.primitive_cube_add(size=1)
             obj = bpy.context.active_object
             obj.name = "CubeInstance"
+            obj.hide_render = True
+            obj.hide_viewport = True
 
             # Ensure object is selected and active before changing mode
             bpy.ops.object.select_all(action='DESELECT')
@@ -225,10 +227,6 @@ class ConcentrationVisualizationHandler(Handler):
             bpy.ops.mesh.select_all(action='SELECT')
             bpy.ops.mesh.edge_face_add()
             bpy.ops.object.mode_set(mode='OBJECT')
-
-            # Hide the object after we're done editing it
-            obj.hide_render = True
-            obj.hide_viewport = True
 
         return obj
 
@@ -520,7 +518,7 @@ class RandomMotionHandler(Handler):
 
 
 """Possible properties by which cells are colored."""
-Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE", "MOLECULE"])
+Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE", "MOLECULE", "LINEAGE", "LINEAGE_DISTANCE"])
 
 """Color map for the random cell colorizer."""
 COLORS = [
@@ -567,31 +565,86 @@ class ColorizeHandler(Handler):
         metabolite: Gene | Molecule | str = None,
         range: tuple | None = None,
     ):
-
         self.colorizer = colorizer
         self.metabolite = metabolite
         self.range = range
         self.color_map = {}
         self.color_counter = 0
+        self.lineage_colors = {}  # Store lineage-based colors
+        # Inferno-like colormap parameters
+        self.base_hue = 0.8  # Start with purple (0.8)
+        self.hue_step = 0.15  # Larger step for more distinct colors
+        self.base_saturation = 0.9  # High saturation for vibrant colors
+        self.saturation_step = 0.05  # Smaller step to maintain vibrancy
+        self.value_step = 0.1  # Step for value changes
 
-    def _scale(self, values):
-        """Scale values using the specified range instead of min-max normalization."""
-        if len(values) == 0:
-            print("No values to scale")
-            return np.array([])
+    def _get_lineage_path(self, cell_name: str) -> list[int]:
+        """Get the lineage path as a list of 0s and 1s from root to cell."""
+        if len(cell_name) <= 2:  # Root cell
+            return []
+        # Extract the path from the cell name
+        # Example: "cell.0.1.0" -> [0, 1, 0]
+        path = []
+        parts = cell_name.split('.')
+        for part in parts[1:]:  # Skip the first part (cell name)
+            path.append(int(part))
+        return path
 
-        # Use the specified range (0.5, 2.5) instead of min-max
-        min_val, max_val = 0.5, 2.5
-        # Clip values to the range
-        values = np.clip(values, min_val, max_val)
+    def _path_to_color(self, path: list[int]) -> tuple[float, float, float]:
+        """Convert a lineage path to an inferno-like color using HSV."""
+        if not path:
+            return (self.base_hue, self.base_saturation, 0.3)  # Dark purple for root
+        # base color
+        hue = self.base_hue
+        for i, step in enumerate(path):
+            # Contribution decreases with depth
+            contribution = self.hue_step / (2 ** i)
+            if step == 0:
+                hue = (hue - contribution) % 1.0  # towards red
+            else:
+                hue = (hue + contribution) % 1.0  # towards yellow
+        # saturation and value
+        depth = len(path)
+        saturation = min(1.0, self.base_saturation + depth * self.saturation_step)
+        value = min(1.0, 0.3 + depth * self.value_step)  # starts dark, get brighter
 
-        # Scale to [0, 1] using the fixed range
-        if max_val - min_val == 0:
-            print("Warning: max_val - min_val is 0, returning all ones")
-            return np.ones_like(values)
+        return (hue, saturation, value)
 
-        scaled = (values - min_val) / (max_val - min_val)
-        return scaled
+    def _hsv_to_rgb(self, hsv):
+        """Convert HSV color to RGB."""
+        h, s, v = hsv
+        if s == 0.0:
+            return (v, v, v)
+
+        i = int(h * 6.0)
+        f = (h * 6.0) - i
+        p = v * (1.0 - s)
+        q = v * (1.0 - s * f)
+        t = v * (1.0 - s * (1.0 - f))
+        i = i % 6
+
+        if i == 0:
+            return (v, t, p)
+        elif i == 1:
+            return (q, v, p)
+        elif i == 2:
+            return (p, v, t)
+        elif i == 3:
+            return (p, q, v)
+        elif i == 4:
+            return (t, p, v)
+        else:
+            return (v, p, q)
+
+    def _assign_lineage_color(self, cell):
+        """Assign a color based on lineage path using inferno-like colormap."""
+        if cell.name in self.lineage_colors:
+            return self.lineage_colors[cell.name]
+
+        cell_path = self._get_lineage_path(cell.name)
+        color = self._path_to_color(cell_path)
+        self.lineage_colors[cell.name] = color
+        return color
 
     def run(self, scene, depsgraph):
         """Applies coloring to cells based on the selected property."""
@@ -619,9 +672,18 @@ class ColorizeHandler(Handler):
                 property_values = (np.array([cell.molecule_concs[self.metabolite]
                                           for cell in cells])
                                  if self.metabolite and all(hasattr(c, 'diffsys') and c.diffsys is not None for c in cells) else np.array([]))
+            elif self.colorizer == Colorizer.LINEAGE_DISTANCE:
+                # Assign colors based on lineage path using inferno-like colormap
+                for cell in cells:
+                    hsv_color = self._assign_lineage_color(cell)
+                    rgb_color = self._hsv_to_rgb(hsv_color)
+                    cell.recolor(rgb_color)
+                return  # Skip the rest of the function since we've already colored the cells
+            elif self.colorizer == Colorizer.LINEAGE:
+                pass
             else:
                 print(f"Error: Invalid colorizer type: {self.colorizer}")
-                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, MOLECULE, or RANDOM.")
+                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, MOLECULE, LINEAGE_DISTANCE, or RANDOM.")
 
             if property_values is not None:
                 values = self._scale(property_values)
@@ -876,7 +938,7 @@ class DataExporter(Handler):
         contact_areas = {}
         ratios = {}
 
-        for cell_idx, cell in enumerate(self.get_cells(), 1):
+        for cell in self.get_cells():
             cell_grp = cells_grp.create_group(cell.name)
             cell_grp.attrs["name"] = cell.name
             cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
@@ -1162,7 +1224,6 @@ class SliceExporter(Handler):
         new_scale = tuple(s * d for s, d in zip(self.scale, downscale, strict=False))
 
         # Downsample using sum operation (preserves binary nature)
-        from scipy import ndimage
         downsampled = ndimage.zoom(volume,
                                  (1/downscale[0], 1/downscale[1], 1/downscale[2]),
                                  order=0)  # order=0 for nearest neighbor
