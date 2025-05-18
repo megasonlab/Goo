@@ -30,12 +30,15 @@ class Cell(BlenderObject):
 
     Attributes:
         celltype (CellType): The cell type to which the cell belongs.
+        homo_adhesion_strength (float): The homotypic adhesion strength for this cell.
+            If set, overrides the cell type's default adhesion strength.
     """
 
     def __init__(self):
         self._name = ""
         self.obj: bpy.types.Object = None
         self._color: tuple[float, float, float] = None
+        self._homo_adhesion_strength: float = None
 
         self.direction = Vector()
         self.adhesion_force: AdhesionForce = None
@@ -74,6 +77,28 @@ class Cell(BlenderObject):
             return self.obj.data.materials[0]
 
         return None
+
+    @property
+    def homo_adhesion_strength(self) -> float:
+        """Get the homotypic adhesion strength for this cell.
+        If not set, returns the cell type's default adhesion strength.
+        If cell type is not set, returns None.
+        """
+        if self._homo_adhesion_strength is not None:
+            return self._homo_adhesion_strength
+        if hasattr(self, 'celltype'):
+            return self.celltype.homo_adhesion_strength
+        return None
+
+    @homo_adhesion_strength.setter
+    def homo_adhesion_strength(self, strength: float):
+        """Set the homotypic adhesion strength for this cell.
+        If set to None, will use the cell type's default adhesion strength.
+        """
+        self._homo_adhesion_strength = strength
+        # If physics is enabled, update the adhesion force
+        if self.physics_enabled and self.adhesion_force:
+            self.adhesion_force.strength = strength
 
     def copy(self):
         other_obj = self.obj.copy()
@@ -333,7 +358,7 @@ class Cell(BlenderObject):
         for force in self.adhesion_forces:
             force.loc = self.loc
 
-    def remesh(self, voxel_size: float = 0.4, smooth: bool = True) -> None:
+    def remesh(self, voxel_size: float = 0.7, smooth: bool = True) -> None:
         """Remesh the underlying mesh representation of the cell.
 
         Remeshing is done using the built-in `voxel_remesh()`.
@@ -440,13 +465,11 @@ class Cell(BlenderObject):
         current modifier settings, removing all modifiers, and disabling any adhesion
         forces.
 
-        Raises:
-            RuntimeError: If physics is not enabled.
+        Note:
+            If physics is already disabled, this function will do nothing.
         """
         if not self.physics_enabled:
-            raise RuntimeError(
-                f"Trying to disable physics on cell {self.name} when already disabled!"
-            )
+            return  # Exit early if physics is already disabled
 
         for mod in self.obj.modifiers:
             name, type = mod.name, mod.type
@@ -1177,7 +1200,11 @@ class CellPattern:
         hetero_adhesion_strengths: dict[CellType, int],
         hetero_adhesion_collections: dict[CellType, tuple[ForceCollection]],
     ):
-        homo_adhesion = create_adhesion(homo_adhesion_strength, obj=self._cell.obj)
+        # Use cell's adhesion strength if set, otherwise use provided homo_adhesion_strength
+        strength = self._cell.homo_adhesion_strength
+        if strength is None:
+            strength = homo_adhesion_strength
+        homo_adhesion = create_adhesion(strength, obj=self._cell.obj)
         homo_adhesion_collection.add(homo_adhesion)
 
         self._cell.add_force(homo_adhesion)

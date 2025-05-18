@@ -1,5 +1,6 @@
 from typing import Union
 
+import bmesh
 import bpy
 
 from mathutils import Vector
@@ -334,9 +335,38 @@ class ForceCollection:
 class Boundary(BlenderObject):
     """A boundary for cells."""
 
+    def __init__(self, obj):
+        super().__init__(obj)
+        self.volume_history = []
+
     def setup_physics(self):
         """Set up physics for the boundary."""
         BoundaryCollisionConstructor().construct(self.obj)
+
+    def update_volume(self):
+        """Update the volume of the boundary."""
+        bm = bmesh.new()
+        bm.from_mesh(self.obj.data)
+        bm.transform(self.obj.matrix_world)
+        volume = bm.calc_volume()
+        bm.free()
+        self.volume_history.append(volume)
+        return volume
+
+    def remesh(self, voxel_size: float = 0.7, smooth: bool = True) -> None:
+        """Remesh the boundary mesh.
+
+        Args:
+            voxel_size: The resolution used for the remesher (smaller means more polygons).
+            smooth: If true, the final faces will appear smooth.
+        """
+        self.obj.data.remesh_mode = "VOXEL"
+        self.obj.data.remesh_voxel_size = voxel_size
+        with bpy.context.temp_override(active_object=self.obj, object=self.obj):
+            bpy.ops.object.voxel_remesh()
+
+        for f in self.obj.data.polygons:
+            f.use_smooth = smooth
 
 
 def create_boundary(loc: tuple, size: float, mesh: str = "icosphere"):

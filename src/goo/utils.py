@@ -270,13 +270,6 @@ class CollisionConstructor(ModConstructor):
         mod.settings.cloth_friction = 0
         mod.settings.use_normal = False
 
-
-class BoundaryCollisionConstructor(CollisionConstructor):
-    def setup_mod(self, mod: bpy.types.CollisionModifier):
-        super().setup_mod(mod)
-        mod.settings.use_culling = False
-
-
 class SubsurfConstructor(ModConstructor):
     name = "Subdivision"
     type = "SUBSURF"
@@ -286,6 +279,45 @@ class SubsurfConstructor(ModConstructor):
         mod.levels = 1
         mod.render_levels = 1
 
+class BoundaryCollisionConstructor(CollisionConstructor):
+    def setup_mod(self, mod: bpy.types.CollisionModifier):
+        super().setup_mod(mod)
+        mod.settings.use_culling = False
+        mod.settings.damping = 1
+        mod.settings.thickness_outer = 0.025
+        mod.settings.thickness_inner = 0.25
+        mod.settings.cloth_friction = 0
+        mod.settings.use_normal = False
+
+class BoundarySubsurfConstructor(SubsurfConstructor):
+    def setup_mod(self, mod: bpy.types.SubsurfModifier):
+        super().setup_mod(mod)
+        mod.levels = 2
+        mod.render_levels = 1
+
+class BoundaryClothConstructor(ClothConstructor):
+    def setup_mod(self, mod: bpy.types.ClothModifier):
+        super().setup_mod(mod)
+        mod.settings.mass = 0
+        mod.settings.air_damping = 1
+
+        mod.settings.tension_stiffness = 1
+        mod.settings.compression_stiffness = 1
+        mod.settings.shear_stiffness = 1
+        mod.settings.bending_stiffness = 0.5
+        mod.settings.tension_damping = 10
+        mod.settings.compression_damping = 10
+        mod.settings.shear_damping = 10
+        mod.settings.bending_damping = 0.5
+        mod.settings.use_pressure = False
+        mod.collision_settings.use_collision = True
+        mod.collision_settings.use_self_collision = False
+        mod.collision_settings.distance_min = 0.05
+        mod.collision_settings.damping = 1
+        mod.collision_settings.thickness_outer = 0.025
+        mod.collision_settings.thickness_inner = 0.25
+        mod.collision_settings.cloth_friction = 0
+        # mod.settings.shrink_min = 0
 
 # not stable
 class RemeshConstructor(ModConstructor):

@@ -17,6 +17,7 @@ from scipy.spatial.distance import cdist, pdist, squareform
 from typing_extensions import override
 
 from goo.cell import Cell
+from goo.force import create_boundary
 from goo.gene import Gene
 from goo.molecule import DiffusionSystem, Molecule
 
@@ -294,24 +295,37 @@ class StopHandler(Handler):
         if should_stop:
             print(f"{stop_reason}. Stopping.")
 
-            # Handle stopping differently based on whether we're rendering or simulating
-            if bpy.context.space_data and bpy.context.space_data.type == 'VIEW_3D':
-                # We're in the viewport, can use animation_cancel
-                bpy.ops.screen.animation_cancel(restore_frame=True)
-            else:
-                # We're rendering, set the frame end to current frame
-                bpy.context.scene.frame_end = scene.frame_current
-
-            # Freeze all cells
-            for cell in self.get_cells():
-                # Only try to disable physics and remesh if the cell has physics enabled
-                if hasattr(cell, 'physics_enabled') and cell.physics_enabled:
+            try:
+                # Freeze all cells
+                for cell in self.get_cells():
+                    # Apply all modifiers to get the final state
+                    for mod in cell.obj.modifiers:
+                        try:
+                            bpy.context.view_layer.objects.active = cell.obj
+                            bpy.ops.object.modifier_apply(modifier=mod.name)
+                        except Exception as e:
+                            print(f"Warning: Could not apply modifier {mod.name} to {cell.name}: {e}")
                     cell.disable_physics()
                     cell.remesh()
+            except Exception as e:
+                print(f"Warning: Could not freeze cells properly: {e}")
+                # Still try to disable physics on all cells
+                for cell in self.get_cells():
+                    if cell.physics_enabled:
+                        try:
+                            cell.disable_physics()
+                        except Exception:
+                            pass
 
-            # Remove all handlers to prevent further processing
-            bpy.app.handlers.frame_change_pre.clear()
-            bpy.app.handlers.frame_change_post.clear()
+            # Remove all handlers
+            for handler in bpy.app.handlers.frame_change_pre[:]:
+                bpy.app.handlers.frame_change_pre.remove(handler)
+            for handler in bpy.app.handlers.frame_change_post[:]:
+                bpy.app.handlers.frame_change_post.remove(handler)
+
+            # Useful when not using sim.run()
+            bpy.context.scene.frame_set(1)
+            bpy.ops.screen.animation_cancel()
 
 
 class RemeshHandler(Handler):
@@ -399,6 +413,24 @@ class NetworkHandler(Handler):
         for cell in self.get_cells():
             cell.step_grn(dt=self.dt)
             cell.update_physics_with_grn()
+
+class BoundaryHandler(Handler):
+    """Handler for updating boundary volume over time."""
+
+    def __init__(
+        self,
+        loc: tuple[float, float, float] = (0, 0, 0),
+        radius: float = 10,
+    ):
+        self.loc = loc
+        self.radius = radius
+        self.boundary = create_boundary(loc, radius)
+
+    def run(self, scene, depsgraph):
+        volume = self.boundary.update_volume()
+        self.boundary.remesh(voxel_size=1)
+        bpy.context.scene.world["boundary_volume"] = volume
+        print(f"Boundary volume: {volume}")
 
 class RecenterHandler(Handler):
     """Handler for updating cell origin and location of
@@ -1005,25 +1037,41 @@ class DataExporter(Handler):
         # Contact area and ratios
         if self.options & DataFlag.CONTACT_AREAS:
             contact_areas, ratios = _contact_areas(self.get_cells())
-            print(f"contact_areas: {contact_areas}, ratios: {ratios}")
+            # Create a single dataset for contact areas
+            dt = np.dtype([
+                ('source', h5py.string_dtype('utf-8')),
+                ('target', h5py.string_dtype('utf-8')),
+                ('area', float)
+            ])
+            data = []
+            for source, contacts in contact_areas.items():
+                for target, area in contacts:
+                    data.append((str(source), str(target), area))  # Ensure strings
 
-            areas_grp = frame_grp.create_group("contact_areas")
-            dtype_areas = [('cell', 'S50'), ('area', float)]
-            for cell_name in cells_grp.keys():
-                cell_area_list = contact_areas.get(cell_name, [])
-                if not cell_area_list:
-                    cell_area_list = [('none', 0.0)]
-                data = np.array(cell_area_list, dtype=dtype_areas)
-                areas_grp.create_group(cell_name).create_dataset("areas", data=data)
+            area_data = np.array(data, dtype=dt)
+            frame_grp.create_dataset("contact_areas", data=area_data)
 
-            ratios_grp = frame_grp.create_group("contact_ratios")
-            dtype_ratios = [('cell', 'S50'), ('ratio', float)]
-            for cell_name in cells_grp.keys():
-                cell_ratio_list = ratios.get(cell_name, [])
-                if not cell_ratio_list:
-                    cell_ratio_list = [('none', 0.0)]
-                data = np.array(cell_ratio_list, dtype=dtype_ratios)
-                ratios_grp.create_group(cell_name).create_dataset("ratios", data=data)
+
+            # contact_areas, ratios = _contact_areas(self.get_cells())
+            # print(f"contact_areas: {contact_areas}, ratios: {ratios}")
+
+            # areas_grp = frame_grp.create_group("contact_areas")
+            # dtype_areas = [('cell', 'S50'), ('area', float)]
+            # for cell_name in cells_grp.keys():
+            #     cell_area_list = contact_areas.get(cell_name, [])
+            #     if not cell_area_list:
+            #         cell_area_list = [('none', 0.0)]
+            #     data = np.array(cell_area_list, dtype=dtype_areas)
+            #     areas_grp.create_group(cell_name).create_dataset("areas", data=data)
+
+            # ratios_grp = frame_grp.create_group("contact_ratios")
+            # dtype_ratios = [('cell', 'S50'), ('ratio', float)]
+            # for cell_name in cells_grp.keys():
+            #     cell_ratio_list = ratios.get(cell_name, [])
+            #     if not cell_ratio_list:
+            #         cell_ratio_list = [('none', 0.0)]
+            #     data = np.array(cell_ratio_list, dtype=dtype_ratios)
+            #     ratios_grp.create_group(cell_name).create_dataset("ratios", data=data)
 
     def close(self):
         if self.h5file:

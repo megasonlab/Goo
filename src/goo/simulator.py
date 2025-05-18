@@ -187,18 +187,18 @@ class Simulator:
 
     def add_handlers(self, handlers: list[Handler]):
         """Add multiple handlers to the simulation."""
-        # always include a stop handler
+        # Add all other handlers first
+        for handler in handlers:
+            self.add_handler(handler)
+
+        # Add stop handler last so it runs after other handlers
         stop_handler = StopHandler(max_cells=self.max_cells)
-        # Initialize the stop handler with the same parameters as other handlers
         stop_handler.setup(
             self.get_cells_func(),
             self.get_diffsystem_func(),
             self.physics_dt,
         )
         bpy.app.handlers.frame_change_pre.append(stop_handler.run)
-
-        for handler in handlers:
-            self.add_handler(handler)
 
     def render(
         self,
@@ -296,3 +296,7 @@ class Simulator:
             print(i, end=" ")
             bpy.context.scene.frame_set(i)
         print("\n----- SIMULATION END -----")
+
+        # Set frame back to 1 and stop animation
+        bpy.context.scene.frame_set(1)
+        bpy.ops.screen.animation_cancel()
