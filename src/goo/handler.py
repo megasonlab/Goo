@@ -236,29 +236,8 @@ class ConcentrationVisualizationHandler(Handler):
 class StopHandler(Handler):
     """Handler for stopping the simulation at the end of the simulation time or when reaching max cells."""
 
-    def __init__(self, max_cells: int | None = None):
-        super().__init__()
-        self.get_cells = None
-        self.get_diffsystem = None
-        self.dt = None
+    def __init__(self, max_cells=None):
         self.max_cells = max_cells
-
-    def setup(
-        self,
-        get_cells: Callable[[], list[Cell]],
-        get_diffsystem: Callable[[], DiffusionSystem],
-        dt: float,
-    ) -> None:
-        """Set up the handler.
-
-        Args:
-            get_cells: A function that, when called,
-                retrieves the list of cells that may divide.
-            dt: The time step for the simulation.
-        """
-        self.get_cells = get_cells
-        self.get_diffsystem = get_diffsystem
-        self.dt = dt
 
     def run(self, scene, depsgraph):
         if not self.get_cells:
@@ -296,12 +275,20 @@ class StopHandler(Handler):
             print(f"{stop_reason}. Stopping.")
 
             try:
+                # Store the current context
+                current_context = bpy.context.area
+                current_mode = bpy.context.mode if hasattr(bpy.context, 'mode') else None
+
                 # Freeze all cells
                 for cell in self.get_cells():
                     # Apply all modifiers to get the final state
                     for mod in cell.obj.modifiers:
                         try:
+                            # Ensure we're in object mode and the object is active
+                            if bpy.context.mode != 'OBJECT':
+                                bpy.ops.object.mode_set(mode='OBJECT')
                             bpy.context.view_layer.objects.active = cell.obj
+                            cell.obj.select_set(True)
                             bpy.ops.object.modifier_apply(modifier=mod.name)
                         except Exception as e:
                             print(f"Warning: Could not apply modifier {mod.name} to {cell.name}: {e}")
@@ -325,7 +312,12 @@ class StopHandler(Handler):
 
             # Useful when not using sim.run()
             bpy.context.scene.frame_set(1)
-            bpy.ops.screen.animation_cancel()
+            try:
+                # Try to cancel animation only if we're in a valid context
+                if bpy.context.area and bpy.context.area.type == 'VIEW_3D':
+                    bpy.ops.screen.animation_cancel()
+            except Exception as e:
+                print(f"Warning: Could not cancel animation: {e}")
 
 
 class RemeshHandler(Handler):
@@ -970,60 +962,76 @@ class DataExporter(Handler):
         contact_areas = {}
         ratios = {}
 
+        # Keep track of used names to handle duplicates
+        used_names = set()
+
         for cell in self.get_cells():
-            cell_grp = cells_grp.create_group(cell.name)
-            cell_grp.attrs["name"] = cell.name
-            cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
+            # Create a unique name for the cell group
+            base_name = cell.name
+            cell_name = base_name
+            counter = 1
+            while cell_name in used_names:
+                cell_name = f"{base_name}_{counter}"
+                counter += 1
+            used_names.add(cell_name)
 
-            # Initialize all potential datasets with defaults
-            if self.options & DataFlag.VOLUMES:
-                cell_grp.create_dataset("volume", data=np.nan)
-            if self.options & DataFlag.PRESSURES:
-                cell_grp.create_dataset("pressure", data=np.nan)
-            if self.options & DataFlag.DIVISIONS:
-                cell_grp.create_dataset("division_frame", data=np.nan)
-            if self.options & DataFlag.FORCE_PATH:
-                cell_grp.create_dataset("force_loc", data=np.full(3, np.nan, dtype=np.float64))
-            if self.options & DataFlag.SHAPE_FEATURES:
-                cell_grp.create_dataset("aspect_ratio", data=np.nan)
-                cell_grp.create_dataset("sphericity", data=np.nan)
-                cell_grp.create_dataset("compactness", data=np.nan)
-                cell_grp.create_dataset("sav_ratio", data=np.nan)
+            try:
+                cell_grp = cells_grp.create_group(cell_name)
+                cell_grp.attrs["name"] = cell.name  # Store original name as attribute
+                cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
 
-            # Populate datasets only if data is present
-            if self.options & DataFlag.VOLUMES:
-                cell_grp["volume"][...] = float(cell.volume())
-            if cell.physics_enabled and (self.options & DataFlag.PRESSURES):
-                cell_grp["pressure"][...] = float(cell.pressure)
-            if self.options & DataFlag.DIVISIONS and getattr(cell, 'division_frame', None) is not None:
-                cell_grp["division_frame"][...] = float(cell.division_frame)
-            if self.options & DataFlag.FORCE_PATH:
-                cell_grp["force_loc"][...] = np.array(cell.motion_force.loc, dtype=np.float64)
+                # Initialize all potential datasets with defaults
+                if self.options & DataFlag.VOLUMES:
+                    cell_grp.create_dataset("volume", data=np.nan)
+                if self.options & DataFlag.PRESSURES:
+                    cell_grp.create_dataset("pressure", data=np.nan)
+                if self.options & DataFlag.DIVISIONS:
+                    cell_grp.create_dataset("division_frame", data=np.nan)
+                if self.options & DataFlag.FORCE_PATH:
+                    cell_grp.create_dataset("force_loc", data=np.full(3, np.nan, dtype=np.float64))
+                if self.options & DataFlag.SHAPE_FEATURES:
+                    cell_grp.create_dataset("aspect_ratio", data=np.nan)
+                    cell_grp.create_dataset("sphericity", data=np.nan)
+                    cell_grp.create_dataset("compactness", data=np.nan)
+                    cell_grp.create_dataset("sav_ratio", data=np.nan)
 
-            if self.options & DataFlag.SHAPE_FEATURES:
-                cell_grp["aspect_ratio"][...] = float(cell.aspect_ratio())
-                cell_grp["sphericity"][...] = float(cell.sphericity())
-                cell_grp["compactness"][...] = float(cell.compactness())
-                cell_grp["sav_ratio"][...] = float(cell.sav_ratio())
+                # Populate datasets only if data is present
+                if self.options & DataFlag.VOLUMES:
+                    cell_grp["volume"][...] = float(cell.volume())
+                if cell.physics_enabled and (self.options & DataFlag.PRESSURES):
+                    cell_grp["pressure"][...] = float(cell.pressure)
+                if self.options & DataFlag.DIVISIONS and getattr(cell, 'division_frame', None) is not None:
+                    cell_grp["division_frame"][...] = float(cell.division_frame)
+                if self.options & DataFlag.FORCE_PATH:
+                    cell_grp["force_loc"][...] = np.array(cell.motion_force.loc, dtype=np.float64)
 
-            if self.options & DataFlag.GENES:
-                if hasattr(cell, 'gene_concs') and cell.gene_concs:
-                    for gene, gene_conc in cell.gene_concs.items():
-                        gene_name = gene.name if hasattr(gene, 'name') else str(gene)
-                        cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+                if self.options & DataFlag.SHAPE_FEATURES:
+                    cell_grp["aspect_ratio"][...] = float(cell.aspect_ratio())
+                    cell_grp["sphericity"][...] = float(cell.sphericity())
+                    cell_grp["compactness"][...] = float(cell.compactness())
+                    cell_grp["sav_ratio"][...] = float(cell.sav_ratio())
 
-            if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
-                for mol, mol_conc in cell.molecule_concs.items():
-                    mol_name = mol.name if hasattr(mol, 'name') else str(mol)
-                    if isinstance(mol_conc, (tuple, list)):
-                        if len(mol_conc) == 2 and isinstance(mol_conc[1], (int, float)):
-                            cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
+                if self.options & DataFlag.GENES:
+                    if hasattr(cell, 'gene_concs') and cell.gene_concs:
+                        for gene, gene_conc in cell.gene_concs.items():
+                            gene_name = gene.name if hasattr(gene, 'name') else str(gene)
+                            cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+
+                if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
+                    for mol, mol_conc in cell.molecule_concs.items():
+                        mol_name = mol.name if hasattr(mol, 'name') else str(mol)
+                        if isinstance(mol_conc, (tuple, list)):
+                            if len(mol_conc) == 2 and isinstance(mol_conc[1], (int, float)):
+                                cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
+                            else:
+                                cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
+                        elif isinstance(mol_conc, (int, float)):
+                            cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
                         else:
-                            cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
-                    elif isinstance(mol_conc, (int, float)):
-                        cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
-                    else:
-                        print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
+                            print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
+            except Exception as e:
+                print(f"Warning: Could not save data for cell {cell.name}: {e}")
+                continue
 
         # Grid concentration data
         if self.options & DataFlag.GRID:
@@ -1050,28 +1058,6 @@ class DataExporter(Handler):
 
             area_data = np.array(data, dtype=dt)
             frame_grp.create_dataset("contact_areas", data=area_data)
-
-
-            # contact_areas, ratios = _contact_areas(self.get_cells())
-            # print(f"contact_areas: {contact_areas}, ratios: {ratios}")
-
-            # areas_grp = frame_grp.create_group("contact_areas")
-            # dtype_areas = [('cell', 'S50'), ('area', float)]
-            # for cell_name in cells_grp.keys():
-            #     cell_area_list = contact_areas.get(cell_name, [])
-            #     if not cell_area_list:
-            #         cell_area_list = [('none', 0.0)]
-            #     data = np.array(cell_area_list, dtype=dtype_areas)
-            #     areas_grp.create_group(cell_name).create_dataset("areas", data=data)
-
-            # ratios_grp = frame_grp.create_group("contact_ratios")
-            # dtype_ratios = [('cell', 'S50'), ('ratio', float)]
-            # for cell_name in cells_grp.keys():
-            #     cell_ratio_list = ratios.get(cell_name, [])
-            #     if not cell_ratio_list:
-            #         cell_ratio_list = [('none', 0.0)]
-            #     data = np.array(cell_ratio_list, dtype=dtype_ratios)
-            #     ratios_grp.create_group(cell_name).create_dataset("ratios", data=data)
 
     def close(self):
         if self.h5file:

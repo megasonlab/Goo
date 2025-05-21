@@ -167,7 +167,7 @@ class ClothConstructor(ModConstructor):
         pressure = 0.01
 
         mod.settings.quality = 10
-        mod.settings.air_damping = 10
+        mod.settings.air_damping = 500
         mod.settings.bending_model = "ANGULAR"
         mod.settings.mass = 1
         mod.settings.time_scale = 1
