@@ -17,6 +17,7 @@ from scipy.spatial.distance import cdist, pdist, squareform
 from typing_extensions import override
 
 from goo.cell import Cell
+from goo.force import create_boundary
 from goo.gene import Gene
 from goo.molecule import DiffusionSystem, Molecule
 
@@ -189,7 +190,13 @@ class ConcentrationVisualizationHandler(Handler):
             mat.use_nodes = True
             bsdf = mat.node_tree.nodes["Principled BSDF"]
             mat.blend_method = 'BLEND'
-            mat.shadow_method = 'HASHED'
+
+            # Handle shadow method for different Blender versions
+            if hasattr(mat, 'shadow_method'):
+                mat.shadow_method = 'HASHED'
+            else:
+                # For Blender 4.5+, use the new shadow method
+                mat.shadow_method = 'CLIP'  # or 'NONE' depending on your needs
 
             # Vertex color attribute
             attribute_node = mat.node_tree.nodes.new("ShaderNodeAttribute")
@@ -210,6 +217,11 @@ class ConcentrationVisualizationHandler(Handler):
             obj.hide_render = True
             obj.hide_viewport = True
 
+            # Ensure object is selected and active before changing mode
+            bpy.ops.object.select_all(action='DESELECT')
+            obj.select_set(True)
+            bpy.context.view_layer.objects.active = obj
+
             # Optimize cube geometry
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.delete(type='ONLY_FACE')
@@ -224,29 +236,8 @@ class ConcentrationVisualizationHandler(Handler):
 class StopHandler(Handler):
     """Handler for stopping the simulation at the end of the simulation time or when reaching max cells."""
 
-    def __init__(self, max_cells: int | None = None):
-        super().__init__()
-        self.get_cells = None
-        self.get_diffsystem = None
-        self.dt = None
+    def __init__(self, max_cells=None):
         self.max_cells = max_cells
-
-    def setup(
-        self,
-        get_cells: Callable[[], list[Cell]],
-        get_diffsystem: Callable[[], DiffusionSystem],
-        dt: float,
-    ) -> None:
-        """Set up the handler.
-
-        Args:
-            get_cells: A function that, when called,
-                retrieves the list of cells that may divide.
-            dt: The time step for the simulation.
-        """
-        self.get_cells = get_cells
-        self.get_diffsystem = get_diffsystem
-        self.dt = dt
 
     def run(self, scene, depsgraph):
         if not self.get_cells:
@@ -283,24 +274,50 @@ class StopHandler(Handler):
         if should_stop:
             print(f"{stop_reason}. Stopping.")
 
-            # Handle stopping differently based on whether we're rendering or simulating
-            if bpy.context.space_data and bpy.context.space_data.type == 'VIEW_3D':
-                # We're in the viewport, can use animation_cancel
-                bpy.ops.screen.animation_cancel(restore_frame=True)
-            else:
-                # We're rendering, set the frame end to current frame
-                bpy.context.scene.frame_end = scene.frame_current
+            try:
+                # Store the current context
+                current_context = bpy.context.area
+                current_mode = bpy.context.mode if hasattr(bpy.context, 'mode') else None
 
-            # Freeze all cells
-            for cell in self.get_cells():
-                # Only try to disable physics and remesh if the cell has physics enabled
-                if hasattr(cell, 'physics_enabled') and cell.physics_enabled:
+                # Freeze all cells
+                for cell in self.get_cells():
+                    # Apply all modifiers to get the final state
+                    for mod in cell.obj.modifiers:
+                        try:
+                            # Ensure we're in object mode and the object is active
+                            if bpy.context.mode != 'OBJECT':
+                                bpy.ops.object.mode_set(mode='OBJECT')
+                            bpy.context.view_layer.objects.active = cell.obj
+                            cell.obj.select_set(True)
+                            bpy.ops.object.modifier_apply(modifier=mod.name)
+                        except Exception as e:
+                            print(f"Warning: Could not apply modifier {mod.name} to {cell.name}: {e}")
                     cell.disable_physics()
                     cell.remesh()
+            except Exception as e:
+                print(f"Warning: Could not freeze cells properly: {e}")
+                # Still try to disable physics on all cells
+                for cell in self.get_cells():
+                    if cell.physics_enabled:
+                        try:
+                            cell.disable_physics()
+                        except Exception:
+                            pass
 
-            # Remove all handlers to prevent further processing
-            bpy.app.handlers.frame_change_pre.clear()
-            bpy.app.handlers.frame_change_post.clear()
+            # Remove all handlers
+            for handler in bpy.app.handlers.frame_change_pre[:]:
+                bpy.app.handlers.frame_change_pre.remove(handler)
+            for handler in bpy.app.handlers.frame_change_post[:]:
+                bpy.app.handlers.frame_change_post.remove(handler)
+
+            # Useful when not using sim.run()
+            bpy.context.scene.frame_set(1)
+            try:
+                # Try to cancel animation only if we're in a valid context
+                if bpy.context.area and bpy.context.area.type == 'VIEW_3D':
+                    bpy.ops.screen.animation_cancel()
+            except Exception as e:
+                print(f"Warning: Could not cancel animation: {e}")
 
 
 class RemeshHandler(Handler):
@@ -389,6 +406,24 @@ class NetworkHandler(Handler):
             cell.step_grn(dt=self.dt)
             cell.update_physics_with_grn()
 
+class BoundaryHandler(Handler):
+    """Handler for updating boundary volume over time."""
+
+    def __init__(
+        self,
+        loc: tuple[float, float, float] = (0, 0, 0),
+        radius: float = 10,
+    ):
+        self.loc = loc
+        self.radius = radius
+        self.boundary = create_boundary(loc, radius)
+
+    def run(self, scene, depsgraph):
+        volume = self.boundary.update_volume()
+        self.boundary.remesh(voxel_size=1)
+        bpy.context.scene.world["boundary_volume"] = volume
+        print(f"Boundary volume: {volume}")
+
 class RecenterHandler(Handler):
     """Handler for updating cell origin and location of
     cell-associated adhesion locations every frame."""
@@ -406,8 +441,12 @@ class RecenterHandler(Handler):
             and hasattr(cell.cloth_mod.settings, 'uniform_pressure_force')
         ]
         average_pressure = np.mean(valid_pressures) if valid_pressures else 0
-        _, sphericities, _, _ = _shape_features(cells)
-        average_sphericity = np.mean(sphericities)
+        sphericities = []
+        for cell in cells:
+            sphericity = cell.sphericity()
+            if sphericity is not None:
+                sphericities.append(sphericity)
+        average_sphericity = np.mean(sphericities) if sphericities else 0
 
         bpy.context.scene.world["Cell#"] = cell_number
         bpy.context.scene.world["Avg Volume"] = average_volume
@@ -426,6 +465,7 @@ class RecenterHandler(Handler):
                         continue
                     force.min_dist = cell_size - 0.4
                     force.max_dist = cell_size + 0.4
+                    force.loc = cell.loc
 
             # Update motion force if it exists
             if hasattr(cell, 'motion_force') and cell.motion_force:
@@ -502,7 +542,7 @@ class RandomMotionHandler(Handler):
 
 
 """Possible properties by which cells are colored."""
-Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE", "MOLECULE"])
+Colorizer = Enum("Colorizer", ["PRESSURE", "VOLUME", "RANDOM", "GENE", "MOLECULE", "LINEAGE", "LINEAGE_DISTANCE"])
 
 """Color map for the random cell colorizer."""
 COLORS = [
@@ -549,31 +589,86 @@ class ColorizeHandler(Handler):
         metabolite: Gene | Molecule | str = None,
         range: tuple | None = None,
     ):
-
         self.colorizer = colorizer
         self.metabolite = metabolite
         self.range = range
         self.color_map = {}
         self.color_counter = 0
+        self.lineage_colors = {}  # Store lineage-based colors
+        # Inferno-like colormap parameters
+        self.base_hue = 0.8  # Start with purple (0.8)
+        self.hue_step = 0.15  # Larger step for more distinct colors
+        self.base_saturation = 0.9  # High saturation for vibrant colors
+        self.saturation_step = 0.05  # Smaller step to maintain vibrancy
+        self.value_step = 0.1  # Step for value changes
 
-    def _scale(self, values):
-        """Scale values using the specified range instead of min-max normalization."""
-        if len(values) == 0:
-            print("No values to scale")
-            return np.array([])
+    def _get_lineage_path(self, cell_name: str) -> list[int]:
+        """Get the lineage path as a list of 0s and 1s from root to cell."""
+        if len(cell_name) <= 2:  # Root cell
+            return []
+        # Extract the path from the cell name
+        # Example: "cell.0.1.0" -> [0, 1, 0]
+        path = []
+        parts = cell_name.split('.')
+        for part in parts[1:]:  # Skip the first part (cell name)
+            path.append(int(part))
+        return path
 
-        # Use the specified range (0.5, 2.5) instead of min-max
-        min_val, max_val = 0.5, 2.5
-        # Clip values to the range
-        values = np.clip(values, min_val, max_val)
+    def _path_to_color(self, path: list[int]) -> tuple[float, float, float]:
+        """Convert a lineage path to an inferno-like color using HSV."""
+        if not path:
+            return (self.base_hue, self.base_saturation, 0.3)  # Dark purple for root
+        # base color
+        hue = self.base_hue
+        for i, step in enumerate(path):
+            # Contribution decreases with depth
+            contribution = self.hue_step / (2 ** i)
+            if step == 0:
+                hue = (hue - contribution) % 1.0  # towards red
+            else:
+                hue = (hue + contribution) % 1.0  # towards yellow
+        # saturation and value
+        depth = len(path)
+        saturation = min(1.0, self.base_saturation + depth * self.saturation_step)
+        value = min(1.0, 0.3 + depth * self.value_step)  # starts dark, get brighter
 
-        # Scale to [0, 1] using the fixed range
-        if max_val - min_val == 0:
-            print("Warning: max_val - min_val is 0, returning all ones")
-            return np.ones_like(values)
+        return (hue, saturation, value)
 
-        scaled = (values - min_val) / (max_val - min_val)
-        return scaled
+    def _hsv_to_rgb(self, hsv):
+        """Convert HSV color to RGB."""
+        h, s, v = hsv
+        if s == 0.0:
+            return (v, v, v)
+
+        i = int(h * 6.0)
+        f = (h * 6.0) - i
+        p = v * (1.0 - s)
+        q = v * (1.0 - s * f)
+        t = v * (1.0 - s * (1.0 - f))
+        i = i % 6
+
+        if i == 0:
+            return (v, t, p)
+        elif i == 1:
+            return (q, v, p)
+        elif i == 2:
+            return (p, v, t)
+        elif i == 3:
+            return (p, q, v)
+        elif i == 4:
+            return (t, p, v)
+        else:
+            return (v, p, q)
+
+    def _assign_lineage_color(self, cell):
+        """Assign a color based on lineage path using inferno-like colormap."""
+        if cell.name in self.lineage_colors:
+            return self.lineage_colors[cell.name]
+
+        cell_path = self._get_lineage_path(cell.name)
+        color = self._path_to_color(cell_path)
+        self.lineage_colors[cell.name] = color
+        return color
 
     def run(self, scene, depsgraph):
         """Applies coloring to cells based on the selected property."""
@@ -601,9 +696,18 @@ class ColorizeHandler(Handler):
                 property_values = (np.array([cell.molecule_concs[self.metabolite]
                                           for cell in cells])
                                  if self.metabolite and all(hasattr(c, 'diffsys') and c.diffsys is not None for c in cells) else np.array([]))
+            elif self.colorizer == Colorizer.LINEAGE_DISTANCE:
+                # Assign colors based on lineage path using inferno-like colormap
+                for cell in cells:
+                    hsv_color = self._assign_lineage_color(cell)
+                    rgb_color = self._hsv_to_rgb(hsv_color)
+                    cell.recolor(rgb_color)
+                return  # Skip the rest of the function since we've already colored the cells
+            elif self.colorizer == Colorizer.LINEAGE:
+                pass
             else:
                 print(f"Error: Invalid colorizer type: {self.colorizer}")
-                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, MOLECULE, or RANDOM.")
+                raise ValueError("Colorizer must be: PRESSURE, VOLUME, GENE, MOLECULE, LINEAGE_DISTANCE, or RANDOM.")
 
             if property_values is not None:
                 values = self._scale(property_values)
@@ -647,7 +751,7 @@ def _get_divisions(cells: list[Cell]) -> list[tuple[str, str, str]]:
 
 @staticmethod
 def _contact_area(
-    cell1: Cell, cell2: Cell, threshold=0.02
+    cell1: Cell, cell2: Cell, threshold=0.3
 ) -> tuple[float, float, float, float]:
     """Calculate the contact areas between two cells.
 
@@ -691,7 +795,7 @@ def _contact_area(
 
 
 @staticmethod
-def _contact_areas(cells: list[Cell], threshold=4) -> tuple[dict, dict]:
+def _contact_areas(cells: list[Cell], threshold=5) -> tuple[dict, dict]:
     """Calculate the pairwise contact areas between a list of cells.
 
     Contact is calculated heuristically by first screening cells that are within
@@ -740,8 +844,6 @@ def _contact_areas(cells: list[Cell], threshold=4) -> tuple[dict, dict]:
             areas[cell.name] = [(None, 0.0)]
         if not ratios[cell.name]:
             ratios[cell.name] = [(None, 0.0)]
-
-    print(f"Areas: {areas}")
     return areas, ratios
 
 
@@ -814,15 +916,16 @@ class DataFlag(Flag):
     PRESSURES = auto()
     CONTACT_AREAS = auto()
     SHAPE_FEATURES = auto()
-    GRID = auto()
     CELL_CONCENTRATIONS = auto()
+    GENES = auto()
+    GRID = auto() # larger overhead for each frame, so not saved by default
 
-    DEFAULT = TIMES | DIVISIONS | MOTION_PATH | FORCE_PATH | VOLUMES | PRESSURES | CONTACT_AREAS | SHAPE_FEATURES | CELL_CONCENTRATIONS
-    ALL = _all()
+    DEFAULT = TIMES | DIVISIONS | MOTION_PATH | FORCE_PATH | VOLUMES | PRESSURES | CONTACT_AREAS | SHAPE_FEATURES | CELL_CONCENTRATIONS | GENES
+    ALL = _all() # includes grid concentrations
 
 
 class DataExporter(Handler):
-    def __init__(self, path, options=DataFlag.DEFAULT):
+    def __init__(self, path=None, options=DataFlag.DEFAULT):
         self.path = path
         self.h5file = None
         self.options = options
@@ -834,58 +937,101 @@ class DataExporter(Handler):
         self.dt = dt
         self.time_start = datetime.now()
 
-        if self.path:
-            if os.path.exists(self.path):
-                os.remove(self.path)
-            self.h5file = h5py.File(self.path, 'w')
-            self.h5file.attrs['seed'] = bpy.context.scene["seed"]
+        # Use provided path or create one based on render filepath
+        if self.path is None:
+            render_path = bpy.context.scene.render.filepath
+            render_dir = os.path.dirname(render_path)
+            os.makedirs(render_dir, exist_ok=True)
+            self.path = os.path.join(render_dir, "data.h5")
+
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        self.h5file = h5py.File(self.path, 'w')
+        self.h5file.attrs['seed'] = bpy.context.scene["seed"]
 
     def run(self, scene, depsgraph):
         frame_number = scene.frame_current
         frame_name = f"frame_{frame_number:03d}"
         frame_grp = self.h5file.create_group(frame_name)
-
-        # Add frame metadata
         frame_grp.attrs["frame"] = frame_number
         frame_grp.attrs["time"] = (datetime.now() - self.time_start).total_seconds()
 
-        # Create cells group
         cells_grp = frame_grp.create_group("cells")
+        contact_areas = {}
+        ratios = {}
 
-        # Process each cell
-        for cell_idx, cell in enumerate(self.get_cells(), 1):
-            cell_name = f"cell_{cell_idx:03d}"
-            cell_grp = cells_grp.create_group(cell_name)
+        # Keep track of used names to handle duplicates
+        used_names = set()
 
-            # Basic cell properties
-            cell_grp.attrs["name"] = cell.name
-            cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
-            cell_grp.create_dataset("volume", data=float(cell.volume()))
+        for cell in self.get_cells():
+            # Create a unique name for the cell group
+            base_name = cell.name
+            cell_name = base_name
+            counter = 1
+            while cell_name in used_names:
+                cell_name = f"{base_name}_{counter}"
+                counter += 1
+            used_names.add(cell_name)
 
-            if cell.physics_enabled:
-                cell_grp.create_dataset("pressure", data=float(cell.pressure))
+            try:
+                cell_grp = cells_grp.create_group(cell_name)
+                cell_grp.attrs["name"] = cell.name  # Store original name as attribute
+                cell_grp.create_dataset("loc", data=np.array(cell.loc, dtype=np.float64))
 
-            # Gene expression data - store as direct datasets
-            if hasattr(cell, 'gene_concs') and cell.gene_concs:
-                for gene, gene_conc in cell.gene_concs.items():
-                    gene_name = gene.name if hasattr(gene, 'name') else str(gene)
-                    cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+                # Initialize all potential datasets with defaults
+                if self.options & DataFlag.VOLUMES:
+                    cell_grp.create_dataset("volume", data=np.nan)
+                if self.options & DataFlag.PRESSURES:
+                    cell_grp.create_dataset("pressure", data=np.nan)
+                if self.options & DataFlag.DIVISIONS:
+                    cell_grp.create_dataset("division_frame", data=np.nan)
+                if self.options & DataFlag.FORCE_PATH:
+                    cell_grp.create_dataset("force_loc", data=np.full(3, np.nan, dtype=np.float64))
+                if self.options & DataFlag.SHAPE_FEATURES:
+                    cell_grp.create_dataset("aspect_ratio", data=np.nan)
+                    cell_grp.create_dataset("sphericity", data=np.nan)
+                    cell_grp.create_dataset("compactness", data=np.nan)
+                    cell_grp.create_dataset("sav_ratio", data=np.nan)
 
-            # Molecular concentrations - store as direct datasets
-            if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
-                for mol, mol_conc in cell.molecule_concs.items():
-                    mol_name = mol.name if hasattr(mol, 'name') else str(mol)
-                    # Handle both single values and tuples
-                    if isinstance(mol_conc, tuple | list):
-                        # If it's a tuple with (name, value), use only the value
-                        if len(mol_conc) == 2 and isinstance(mol_conc[1], int | float):
-                            cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
+                # Populate datasets only if data is present
+                if self.options & DataFlag.VOLUMES:
+                    cell_grp["volume"][...] = float(cell.volume())
+                if cell.physics_enabled and (self.options & DataFlag.PRESSURES):
+                    cell_grp["pressure"][...] = float(cell.pressure)
+                if self.options & DataFlag.DIVISIONS and getattr(cell, 'division_frame', None) is not None:
+                    cell_grp["division_frame"][...] = float(cell.division_frame)
+                if self.options & DataFlag.FORCE_PATH:
+                    cell_grp["force_loc"][...] = np.array(cell.motion_force.loc, dtype=np.float64)
+
+                if self.options & DataFlag.SHAPE_FEATURES:
+                    cell_grp["aspect_ratio"][...] = float(cell.aspect_ratio())
+                    cell_grp["sphericity"][...] = float(cell.sphericity())
+                    cell_grp["compactness"][...] = float(cell.compactness())
+                    cell_grp["sav_ratio"][...] = float(cell.sav_ratio())
+
+                if self.options & DataFlag.GENES:
+                    if hasattr(cell, 'gene_concs') and cell.gene_concs:
+                        for gene, gene_conc in cell.gene_concs.items():
+                            gene_name = gene.name if hasattr(gene, 'name') else str(gene)
+                            cell_grp.create_dataset(f"gene_{gene_name}_conc", data=float(gene_conc))
+
+                if hasattr(cell, 'molecule_concs') and cell.molecule_concs:
+                    for mol, mol_conc in cell.molecule_concs.items():
+                        mol_name = mol.name if hasattr(mol, 'name') else str(mol)
+                        if isinstance(mol_conc, (tuple, list)):
+                            if len(mol_conc) == 2 and isinstance(mol_conc[1], (int, float)):
+                                cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc[1]))
+                            else:
+                                cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
+                        elif isinstance(mol_conc, (int, float)):
+                            cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
                         else:
-                            cell_grp.create_dataset(f"mol_{mol_name}_conc", data=np.array(mol_conc, dtype=np.float64))
-                    elif isinstance(mol_conc, int | float):
-                        cell_grp.create_dataset(f"mol_{mol_name}_conc", data=float(mol_conc))
-                    else:
-                        print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
+                            print(f"Warning: Skipping molecule {mol_name} with unsupported concentration type: {type(mol_conc)}")
+            except Exception as e:
+                print(f"Warning: Could not save data for cell {cell.name}: {e}")
+                continue
 
         # Grid concentration data
         if self.options & DataFlag.GRID:
@@ -893,17 +1039,32 @@ class DataExporter(Handler):
             for mol in self.get_diffsystem().molecules:
                 mol_name = mol.name if hasattr(mol, 'name') else str(mol)
                 mol_grp = grid_grp.create_group(mol_name)
+                mol_grp.create_dataset("dimensions", data=np.array(self.get_diffsystem().grid_size, dtype=np.int32))
+                mol_grp.create_dataset("values", data=np.array(self.get_diffsystem()._grid_concentrations[mol_name], dtype=np.float64))
 
-                # Store grid dimensions
-                mol_grp.create_dataset("dimensions",
-                                     data=np.array(self.get_diffsystem().grid_size, dtype=np.int32))
-                print(f"Grid dimensions for {mol_name}: {self.get_diffsystem().grid_size}")
+        # Contact area and ratios
+        if self.options & DataFlag.CONTACT_AREAS:
+            contact_areas, ratios = _contact_areas(self.get_cells())
+            # Create a single dataset for contact areas
+            dt = np.dtype([
+                ('source', h5py.string_dtype('utf-8')),
+                ('target', h5py.string_dtype('utf-8')),
+                ('area', float)
+            ])
+            data = []
+            ratios_data = []
+            for source, contacts in contact_areas.items():
+                for target, area in contacts:
+                    data.append((str(source), str(target), area))  # Ensure strings
 
-                # Store concentration values
-                mol_grp.create_dataset("values",
-                                     data=np.array(self.get_diffsystem()._grid_concentrations[mol_name],
-                                                 dtype=np.float64))
+            for source, contacts in ratios.items():
+                for target, ratio in contacts:
+                    ratios_data.append((str(source), str(target), ratio))
 
+            area_data = np.array(data, dtype=dt)
+            frame_grp.create_dataset("contact_areas", data=area_data)
+            ratios_data = np.array(ratios_data, dtype=dt)
+            frame_grp.create_dataset("contact_ratios", data=ratios_data)
     def close(self):
         if self.h5file:
             self.h5file.close()
@@ -1066,25 +1227,22 @@ class SliceExporter(Handler):
         bm.free()
         return np.array(points)
 
-    def points_to_volume(self, points: np.ndarray) -> np.ndarray:
-        """Convert point cloud to a 3D volume array with continuous surfaces.
+    def points_to_volume_with_labels(self, points: np.ndarray, labels: np.ndarray) -> np.ndarray:
+        grid_points = self.world_to_grid_coords(points).astype(int)
 
-        Args:
-            points: Array of points in world coordinates
+        # Clip to grid bounds
+        valid_mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
+        grid_points = grid_points[valid_mask]
+        labels = labels[valid_mask]
 
-        Returns:
-            3D volume array with continuous surfaces
-        """
-        # Convert points to grid coordinates
-        grid_points = self.world_to_grid_coords(points)
-        volume = np.zeros(self.resolution, dtype=np.float32)
-        grid_points = grid_points.astype(int)
-        mask = np.all((grid_points >= 0) & (grid_points < self.resolution), axis=1)
-        grid_points = grid_points[mask]
-        volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = 1.0
-        volume = ndimage.binary_dilation(volume, structure=np.ones((2,2,2)))
+        # Initialize label volume
+        volume = np.zeros(self.resolution, dtype=np.uint8)
+
+        # Assign each point's label (last one wins if overlap)
+        volume[grid_points[:, 0], grid_points[:, 1], grid_points[:, 2]] = labels
 
         return volume
+
 
     def downsample_volume(self, volume: np.ndarray) -> tuple[np.ndarray, tuple[float, float, float]]:
         """Downsample the volume array and adjust the scale accordingly.
@@ -1107,7 +1265,6 @@ class SliceExporter(Handler):
         new_scale = tuple(s * d for s, d in zip(self.scale, downscale, strict=False))
 
         # Downsample using sum operation (preserves binary nature)
-        from scipy import ndimage
         downsampled = ndimage.zoom(volume,
                                  (1/downscale[0], 1/downscale[1], 1/downscale[2]),
                                  order=0)  # order=0 for nearest neighbor
@@ -1137,17 +1294,22 @@ class SliceExporter(Handler):
         visible_objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH'
                            and obj.visible_get()]
 
-        # Sample points from all meshes
         all_points = []
-        for obj in visible_objects:
+        all_labels = []
+        for idx, obj in enumerate(visible_objects, start=1):  # Start at 1 to reserve 0 for background
             points = self.sample_mesh_points(obj)
+            labels = np.full(len(points), idx, dtype=np.uint8)
             all_points.append(points)
+            all_labels.append(labels)
+
+        combined_points = np.vstack(all_points)
+        combined_labels = np.concatenate(all_labels)
 
         # Combine all points
         combined_points = np.vstack(all_points)
 
         # Convert to volume
-        volume = self.points_to_volume(combined_points)
+        volume = self.points_to_volume_with_labels(combined_points, combined_labels)
 
         # Create coordinate arrays based on scale
         z_coords = np.arange(self.resolution[0]) * self.scale[0]

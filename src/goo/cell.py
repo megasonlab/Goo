@@ -30,14 +30,18 @@ class Cell(BlenderObject):
 
     Attributes:
         celltype (CellType): The cell type to which the cell belongs.
+        homo_adhesion_strength (float): The homotypic adhesion strength for this cell.
+            If set, overrides the cell type's default adhesion strength.
     """
 
     def __init__(self):
         self._name = ""
         self.obj: bpy.types.Object = None
         self._color: tuple[float, float, float] = None
+        self._homo_adhesion_strength: float = None
 
         self.direction = Vector()
+        self.adhesion_force: AdhesionForce = None
         self.adhesion_forces: list[AdhesionForce] = []
         self.motion_force: MotionForce = None
         self.effectors: ForceCollection = None
@@ -49,6 +53,7 @@ class Cell(BlenderObject):
         self.diffsys_hooks = []
 
         self.just_divided = False
+        self.division_frame = None
         self.physics_enabled = False
         self.mod_settings = []
 
@@ -72,6 +77,28 @@ class Cell(BlenderObject):
             return self.obj.data.materials[0]
 
         return None
+
+    @property
+    def homo_adhesion_strength(self) -> float:
+        """Get the homotypic adhesion strength for this cell.
+        If not set, returns the cell type's default adhesion strength.
+        If cell type is not set, returns None.
+        """
+        if self._homo_adhesion_strength is not None:
+            return self._homo_adhesion_strength
+        if hasattr(self, 'celltype'):
+            return self.celltype.homo_adhesion_strength
+        return None
+
+    @homo_adhesion_strength.setter
+    def homo_adhesion_strength(self, strength: float):
+        """Set the homotypic adhesion strength for this cell.
+        If set to None, will use the cell type's default adhesion strength.
+        """
+        self._homo_adhesion_strength = strength
+        # If physics is enabled, update the adhesion force
+        if self.physics_enabled and self.adhesion_force:
+            self.adhesion_force.strength = strength
 
     def copy(self):
         other_obj = self.obj.copy()
@@ -438,13 +465,11 @@ class Cell(BlenderObject):
         current modifier settings, removing all modifiers, and disabling any adhesion
         forces.
 
-        Raises:
-            RuntimeError: If physics is not enabled.
+        Note:
+            If physics is already disabled, this function will do nothing.
         """
         if not self.physics_enabled:
-            raise RuntimeError(
-                f"Trying to disable physics on cell {self.name} when already disabled!"
-            )
+            return  # Exit early if physics is already disabled
 
         for mod in self.obj.modifiers:
             name, type = mod.name, mod.type
@@ -546,6 +571,8 @@ class Cell(BlenderObject):
         mother, daughter = division_logic.make_divide(self)
         mother.just_divided = True
         daughter.just_divided = True
+        mother.division_frame = bpy.context.scene.frame_current
+        daughter.division_frame = bpy.context.scene.frame_current
 
         return mother, daughter
 
@@ -649,8 +676,6 @@ class Cell(BlenderObject):
             center=self.COM(),
             radius=self.radius(),
         )
-        # print(coords, concentrations)
-        print(self.diffsys.get_total_ball_concentrations(mol=mol, center=self.COM(), radius=self.radius()))
         return coords, concentrations
 
     def secrete(self, mol: Molecule):
@@ -958,12 +983,41 @@ class CellType:
         for celltype, strength in hetero_adhesion_strengths.items():
             self.set_hetero_adhesion_strength(celltype, strength)
 
+        # Store molecule-property links for this cell type
+        self._molecule_property_links = []
+
+        # Store diffusion system for this cell type
+        self._diffsys = None
+
     @staticmethod
     def default_celltype() -> "CellType":
         """Get the default cell type."""
         if CellType._default_celltype is None:
             CellType._default_celltype = CellType("default")
         return CellType._default_celltype
+
+    @property
+    def diffsys(self):
+        """Get the diffusion system for this cell type."""
+        return self._diffsys
+
+    @diffsys.setter
+    def diffsys(self, diffsys):
+        """Set the diffusion system for this cell type and apply it to all cells.
+
+        Args:
+            diffsys: The diffusion system to set
+        """
+        self._diffsys = diffsys
+
+        # Apply to all existing cells
+        for cell in self.cells:
+            cell.diffsys = diffsys
+
+            # Re-apply molecule-property links since they need the diffusion system
+            if hasattr(self, '_molecule_property_links'):
+                for molecule, property in self._molecule_property_links:
+                    cell.link_molecule_to_property(molecule, property)
 
     def create_cell(
         self,
@@ -1018,6 +1072,15 @@ class CellType:
         cell.celltype = self
         cell.remesh()
 
+        # Apply diffusion system if one exists for this cell type
+        if self._diffsys is not None:
+            cell.diffsys = self._diffsys
+
+        # Apply any stored molecule-property links to the new cell
+        for molecule, property in self._molecule_property_links:
+            if hasattr(cell, 'diffsys') and cell.diffsys is not None:
+                cell.link_molecule_to_property(molecule, property)
+
         self.cells.append(cell)
         return cell
 
@@ -1036,6 +1099,24 @@ class CellType:
             incoming_collections,
             outgoing_collections,
         )
+
+    def link_molecule_to_property(self, molecule: Molecule, property):
+        """Link molecule to property for all cells of this type.
+
+        This will set up the link for all existing cells and any new cells created
+        from this cell type.
+
+        Args:
+            molecule: The molecule to link
+            property: The property to link the molecule to
+        """
+        # Store the link for future cells
+        self._molecule_property_links.append((molecule, property))
+
+        # Apply the link to all existing cells
+        for cell in self.cells:
+            if hasattr(cell, 'diffsys') and cell.diffsys is not None:
+                cell.link_molecule_to_property(molecule, property)
 
 
 class CellPattern:
@@ -1119,13 +1200,17 @@ class CellPattern:
         hetero_adhesion_strengths: dict[CellType, int],
         hetero_adhesion_collections: dict[CellType, tuple[ForceCollection]],
     ):
-        homo_adhesion = create_adhesion(homo_adhesion_strength, obj=self._cell.obj)
+        # Use cell's adhesion strength if set, otherwise use provided homo_adhesion_strength
+        strength = self._cell.homo_adhesion_strength
+        if strength is None:
+            strength = homo_adhesion_strength
+        homo_adhesion = create_adhesion(strength, obj=self._cell.obj)
         homo_adhesion_collection.add(homo_adhesion)
 
         self._cell.add_force(homo_adhesion)
+        self._cell.adhesion_force = homo_adhesion
         self._cell.add_effector(homo_adhesion_collection)
 
-        # print(hetero_adhesion_strengths.keys(), hetero_adhesion_collections.keys())
         for celltype in hetero_adhesion_strengths.keys():
             strength = hetero_adhesion_strengths[celltype]
             incoming, outgoing = hetero_adhesion_collections[celltype]
