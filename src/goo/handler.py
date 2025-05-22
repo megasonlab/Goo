@@ -1052,13 +1052,19 @@ class DataExporter(Handler):
                 ('area', float)
             ])
             data = []
+            ratios_data = []
             for source, contacts in contact_areas.items():
                 for target, area in contacts:
                     data.append((str(source), str(target), area))  # Ensure strings
 
+            for source, contacts in ratios.items():
+                for target, ratio in contacts:
+                    ratios_data.append((str(source), str(target), ratio))
+
             area_data = np.array(data, dtype=dt)
             frame_grp.create_dataset("contact_areas", data=area_data)
-
+            ratios_data = np.array(ratios_data, dtype=dt)
+            frame_grp.create_dataset("contact_ratios", data=ratios_data)
     def close(self):
         if self.h5file:
             self.h5file.close()

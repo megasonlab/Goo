@@ -167,7 +167,10 @@ class ClothConstructor(ModConstructor):
         pressure = 0.01
 
         mod.settings.quality = 10
-        mod.settings.air_damping = 500
+        try:
+            mod.settings.air_damping = 500  # will work if custom blender version is used
+        except (AttributeError, TypeError):
+            mod.settings.air_damping = 10  # defaults
         mod.settings.bending_model = "ANGULAR"
         mod.settings.mass = 1
         mod.settings.time_scale = 1
